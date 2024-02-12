@@ -9,4 +9,6 @@ func main() {
 	database.InitDatabase()
 	router := gin.Default()
 	InitRoutes(router)
+
+	router.Run(":8080")
 }
