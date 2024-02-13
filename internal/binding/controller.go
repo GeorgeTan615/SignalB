@@ -45,12 +45,16 @@ func RegisterBindingController(c *gin.Context) {
 }
 
 func insertBinding(c context.Context, tickerSymbol, timeframe, strategy string) error {
-	binding := database.NewBinding(tickerSymbol, timeframe, strategy)
 	ctx, cancel := context.WithTimeout(c, 2*time.Second)
 	defer cancel()
 
-	var results []database.Binding
-	err := database.SupabaseDBClient.DB.From("binding").Insert(binding).ExecuteWithContext(ctx, &results)
+	query := `insert into binding (ticker_symbol, timeframe, strategy) values (?,?,?)`
+	_, err := database.MySqlDB.ExecContext(ctx, query, tickerSymbol, timeframe, strategy)
+
+	if err != nil {
+		return err
+	}
+
 	return err
 }
 
@@ -77,6 +81,7 @@ func getBindingsByTicker(c context.Context, tickerSymbol string) ([]interface{},
 	err := database.SupabaseDBClient.DB.From("binding").Select("timeframe", "strategy").Eq("ticker_symbol", tickerSymbol).ExecuteWithContext(ctx, &results)
 
 	return results, err
+
 }
 
 func GetBindingsForTimeframeController(c *gin.Context) {

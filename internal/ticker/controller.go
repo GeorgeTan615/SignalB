@@ -25,10 +25,7 @@ func RegisterTicker(c *gin.Context) {
 		return
 	}
 
-	ctx, cancel := context.WithTimeout(c.Request.Context(), 5*time.Second)
-	defer cancel()
-
-	if err := insertTicker(ctx, req.Symbol, req.Class); err != nil {
+	if err := insertTicker(c.Request.Context(), req.Symbol, req.Class); err != nil {
 		c.JSON(http.StatusInternalServerError, errors.NewErrorRespWithErr(errors.DatabaseInsertionError, err))
 		return
 	}
@@ -38,11 +35,13 @@ func RegisterTicker(c *gin.Context) {
 	})
 }
 
-func insertTicker(ctx context.Context, symbol, class string) error {
-	entry := database.NewTicker(symbol, class)
+func insertTicker(c context.Context, symbol, class string) error {
+	ctx, cancel := context.WithTimeout(c, 5*time.Second)
+	defer cancel()
 
-	var results []database.Ticker
-	err := database.SupabaseDBClient.DB.From("ticker").Insert(entry).ExecuteWithContext(ctx, &results)
+	query := `insert into ticker (symbol, class) values (?,?)`
+
+	_, err := database.MySqlDB.ExecContext(ctx, query, symbol, class)
 
 	if err != nil {
 		return err
@@ -52,10 +51,7 @@ func insertTicker(ctx context.Context, symbol, class string) error {
 }
 
 func GetTickers(c *gin.Context) {
-	ctx, cancel := context.WithTimeout(c.Request.Context(), 1*time.Second)
-	defer cancel()
-
-	results, err := getTickers(ctx)
+	results, err := getTickers(c.Request.Context())
 
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, errors.NewErrorRespWithErr(errors.DatabaseQueryError, err))
@@ -66,14 +62,32 @@ func GetTickers(c *gin.Context) {
 	})
 }
 
-func getTickers(ctx context.Context) ([]database.Ticker, error) {
-	var results []database.Ticker
+func getTickers(c context.Context) ([]database.Ticker, error) {
+	ctx, cancel := context.WithTimeout(c, 1*time.Second)
+	defer cancel()
 
-	err := database.SupabaseDBClient.DB.From("ticker").Select("symbol", "class").ExecuteWithContext(ctx, &results)
+	query := `select symbol, class from ticker`
+
+	res, err := database.MySqlDB.QueryContext(ctx, query)
 
 	if err != nil {
 		return nil, err
 	}
 
-	return results, nil
+	defer res.Close()
+
+	tickers := []database.Ticker{}
+	for res.Next() {
+		var ticker database.Ticker
+
+		err := res.Scan(&ticker.Symbol, &ticker.Class)
+
+		if err != nil {
+			return nil, err
+		}
+
+		tickers = append(tickers, ticker)
+	}
+
+	return tickers, err
 }

@@ -34,9 +34,9 @@ func InitRoutes(router *gin.Engine) {
 
 	// data := router.Group("/api/data")
 	// {
-	// 	data.GET("/:ticker/:timeframe", GetTickerTimeframeDataController)
 	// 	data.POST("/:ticker/:timeframe", RefreshTickerTimeframeDataController)
 	// 	data.POST("/:timeframe", RefreshTimeframeDataController)
+	// 	data.GET("/:ticker/:timeframe", GetTickerTimeframeDataController)
 	// }
 
 }

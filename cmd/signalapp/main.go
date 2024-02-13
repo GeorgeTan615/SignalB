@@ -6,9 +6,9 @@ import (
 )
 
 func main() {
-	database.InitDatabase()
 	router := gin.Default()
 	InitRoutes(router)
+	defer database.MySqlDB.Close()
 
 	router.Run("localhost:8181")
 }

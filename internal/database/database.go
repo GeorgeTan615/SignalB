@@ -1,16 +1,19 @@
 package database
 
 import (
+	"database/sql"
 	"log"
 	"os"
 
+	_ "github.com/go-sql-driver/mysql"
 	"github.com/joho/godotenv"
 	supa "github.com/nedpals/supabase-go"
 )
 
 var SupabaseDBClient *supa.Client
+var MySqlDB *sql.DB
 
-func InitDatabase() {
+func init() {
 	err := godotenv.Load("../../.env")
 	if err != nil {
 		log.Println("Failed to load .env file", err)
@@ -21,4 +24,17 @@ func InitDatabase() {
 
 	supabase := supa.CreateClient(supabaseUrl, supabaseKey)
 	SupabaseDBClient = supabase
+
+	db, err := sql.Open("mysql", os.Getenv("DSN"))
+	if err != nil {
+		log.Fatalf("failed to connect: %v", err)
+	}
+
+	if err := db.Ping(); err != nil {
+		log.Fatalf("failed to ping: %v", err)
+	}
+
+	MySqlDB = db
+
+	log.Println("Successfully connected to PlanetScale!")
 }
