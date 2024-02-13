@@ -73,15 +73,33 @@ func GetBindingsForTickerController(c *gin.Context) {
 	})
 }
 
-func getBindingsByTicker(c context.Context, tickerSymbol string) ([]interface{}, error) {
+func getBindingsByTicker(c context.Context, tickerSymbol string) ([]database.Binding, error) {
+	query := `select ticker_symbol, timeframe, strategy
+					from binding
+					where ticker_symbol = ?`
+
 	ctx, cancel := context.WithTimeout(c, 2*time.Second)
 	defer cancel()
 
-	var results []interface{}
-	err := database.SupabaseDBClient.DB.From("binding").Select("timeframe", "strategy").Eq("ticker_symbol", tickerSymbol).ExecuteWithContext(ctx, &results)
+	res, err := database.MySqlDB.QueryContext(ctx, query, tickerSymbol)
 
-	return results, err
+	if err != nil {
+		return nil, err
+	}
 
+	defer res.Close()
+
+	var results []database.Binding
+	for res.Next() {
+		var binding database.Binding
+
+		if err := res.Scan(&binding.Timeframe, &binding.Strategy, &binding.TickerSymbol); err != nil {
+			return nil, err
+		}
+		results = append(results, binding)
+	}
+
+	return results, nil
 }
 
 func GetBindingsForTimeframeController(c *gin.Context) {
@@ -99,12 +117,31 @@ func GetBindingsForTimeframeController(c *gin.Context) {
 	})
 }
 
-func getBindingsByTimeframe(c context.Context, timeframe string) ([]interface{}, error) {
+func getBindingsByTimeframe(c context.Context, timeframe string) ([]database.Binding, error) {
+	query := `select ticker_symbol, timeframe, strategy
+					from binding
+					where timeframe = ?`
+
 	ctx, cancel := context.WithTimeout(c, 2*time.Second)
 	defer cancel()
 
-	var results []interface{}
-	err := database.SupabaseDBClient.DB.From("binding").Select("ticker_symbol", "strategy").Eq("timeframe", timeframe).ExecuteWithContext(ctx, &results)
+	res, err := database.MySqlDB.QueryContext(ctx, query, timeframe)
 
-	return results, err
+	if err != nil {
+		return nil, err
+	}
+
+	defer res.Close()
+
+	var results []database.Binding
+	for res.Next() {
+		var binding database.Binding
+
+		if err := res.Scan(&binding.Timeframe, &binding.Strategy, &binding.TickerSymbol); err != nil {
+			return nil, err
+		}
+		results = append(results, binding)
+	}
+
+	return results, nil
 }

@@ -3,6 +3,7 @@ package main
 import (
 	"github.com/gin-gonic/gin"
 	"github.com/signalb/internal/binding"
+	"github.com/signalb/internal/marketprice"
 	"github.com/signalb/internal/strategy"
 	"github.com/signalb/internal/ticker"
 	"github.com/signalb/internal/timeframe"
@@ -32,11 +33,11 @@ func InitRoutes(router *gin.Engine) {
 		bindings.GET("/timeframes/:timeframe", binding.GetBindingsForTimeframeController)
 	}
 
-	// data := router.Group("/api/data")
-	// {
-	// 	data.POST("/:ticker/:timeframe", RefreshTickerTimeframeDataController)
-	// 	data.POST("/:timeframe", RefreshTimeframeDataController)
-	// 	data.GET("/:ticker/:timeframe", GetTickerTimeframeDataController)
-	// }
+	data := router.Group("/api/marketprice")
+	{
+		data.POST("/:timeframe/:ticker", marketprice.RefreshMarketpriceByTickerTimeframePriceController)
+		// data.POST("/:timeframe", RefreshTimeframeDataController)
+		// data.GET("/:timeframe/:ticker", GetTickerTimeframeDataController)
+	}
 
 }
