@@ -7,7 +7,6 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
-	"github.com/signalb/constants"
 	"github.com/signalb/internal/database"
 	"github.com/signalb/internal/errors"
 	"github.com/signalb/utils"
@@ -21,8 +20,8 @@ func RegisterTicker(c *gin.Context) {
 		return
 	}
 
-	if !utils.SliceContains[string](constants.AllowedClasses[:], req.Class) {
-		c.JSON(http.StatusBadRequest, errors.NewErrorResp(fmt.Sprintf("Class can only be of %s", constants.AllowedClasses)))
+	if !utils.SliceContains[string](AllowedClasses[:], req.Class) {
+		c.JSON(http.StatusBadRequest, errors.NewErrorResp(fmt.Sprintf("Class can only be of %s", AllowedClasses)))
 		return
 	}
 

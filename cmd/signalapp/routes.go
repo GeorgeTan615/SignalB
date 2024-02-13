@@ -2,6 +2,8 @@ package main
 
 import (
 	"github.com/gin-gonic/gin"
+	"github.com/signalb/internal/binding"
+	"github.com/signalb/internal/strategy"
 	"github.com/signalb/internal/ticker"
 	"github.com/signalb/internal/timeframe"
 )
@@ -18,11 +20,17 @@ func InitRoutes(router *gin.Engine) {
 		tickers.GET("", ticker.GetTickers)
 	}
 
-	// bindings := router.Group("/api/bindings")
-	// {
-	// 	bindings.POST("", RegisterTickerToTimeframeBindingController)
-	// 	bindings.GET("", ListTickerToTimeframeBindingsController)
-	// }
+	strategies := router.Group("/api/strategies")
+	{
+		strategies.GET("", strategy.GetStrategiesController)
+	}
+
+	bindings := router.Group("/api/bindings")
+	{
+		bindings.POST("", binding.RegisterBindingController)
+		bindings.GET("/tickers/:ticker", binding.GetBindingsForTickerController)
+		bindings.GET("/timeframes/:timeframe", binding.GetBindingsForTimeframeController)
+	}
 
 	// data := router.Group("/api/data")
 	// {
