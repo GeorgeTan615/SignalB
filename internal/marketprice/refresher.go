@@ -114,6 +114,18 @@ func refreshData(c context.Context, ticker, timeframe string, data []*TickerData
 		return err
 	}
 
+	// Batch our inserts together to make our write more efficient
+	var builder strings.Builder
+	insQuery := `insert into %s (ticker_symbol,time,price) values ('%s','%s',%.2f);`
+	for i := len(data) - 1; i > -1; i-- {
+		currData := data[i]
+
+		timeString := currData.Time.Format("2006-01-02 15:04:05")
+		nxtQuery := fmt.Sprintf(insQuery, table, ticker, timeString, currData.Price)
+		builder.WriteString(nxtQuery)
+	}
+
+	finalQuery := builder.String()
 	insCtx, cancel := context.WithTimeout(c, 1*time.Minute)
 	defer cancel()
 	tx, err := database.MySqlDB.BeginTx(insCtx, nil)
@@ -122,18 +134,11 @@ func refreshData(c context.Context, ticker, timeframe string, data []*TickerData
 		return err
 	}
 
-	// Add the fresh data
-	insQuery := fmt.Sprintf(`insert into %s (ticker_symbol,time,price)
-						values (?,?,?)`, table)
-	for i := len(data) - 1; i > -1; i-- {
-		currData := data[i]
+	_, err = tx.Exec(finalQuery)
 
-		_, err = tx.Exec(insQuery, ticker, currData.Time, currData.Price)
-
-		if err != nil {
-			tx.Rollback()
-			return err
-		}
+	if err != nil {
+		tx.Rollback()
+		return err
 	}
 
 	return tx.Commit()

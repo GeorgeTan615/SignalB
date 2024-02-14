@@ -36,6 +36,11 @@ type TokenInsightDataResp struct {
 	Data TIDataResp `json:"data"`
 }
 
+type CoinApiDataResp struct {
+	TimePeriodEnd string  `json:"time_period_end"`
+	PriceClose    float64 `json:"price_close"`
+}
+
 type RefreshPriceResp struct {
 	Ticker          string        `json:"ticker"`
 	Class           string        `json:"class"`

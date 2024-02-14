@@ -18,13 +18,25 @@ type TokenInsightCredentials struct {
 	key     string
 }
 
-type CryptoDataFetcher struct {
-	credentials *TokenInsightCredentials
+type CoinApiCredentials struct {
+	baseUrl string
+	key     string
 }
 
-func NewCryptoDataFetcher(credentials *TokenInsightCredentials) *CryptoDataFetcher {
+type CryptoDataFetcher struct {
+	tiCredentials        *TokenInsightCredentials
+	coinApiCredentials   *CoinApiCredentials
+	tickerToShorthandMap map[string]string
+}
+
+func NewCryptoDataFetcher(
+	tiCredentials *TokenInsightCredentials,
+	coinApiCredentials *CoinApiCredentials,
+	tickerToShorthandMap map[string]string) *CryptoDataFetcher {
 	return &CryptoDataFetcher{
-		credentials: credentials,
+		tiCredentials:        tiCredentials,
+		coinApiCredentials:   coinApiCredentials,
+		tickerToShorthandMap: tickerToShorthandMap,
 	}
 }
 
@@ -38,7 +50,7 @@ func (cryptoDF *CryptoDataFetcher) Fetch(timeframe, tickerSymbol string, length 
 	}
 
 	var (
-		fetchStrategy func(credentials *TokenInsightCredentials, tickerSymbol string, length int) ([]*TickerData, error)
+		fetchStrategy func(fetcher *CryptoDataFetcher, tickerSymbol string, length int) ([]*TickerData, error)
 		err           error
 	)
 
@@ -57,14 +69,14 @@ func (cryptoDF *CryptoDataFetcher) Fetch(timeframe, tickerSymbol string, length 
 		return nil, err
 	}
 
-	return fetchStrategy(cryptoDF.credentials, tickerSymbol, length)
+	return fetchStrategy(cryptoDF, tickerSymbol, length)
 }
 
-func handleDay1DataFetching(credentials *TokenInsightCredentials, tickerSymbol string, length int) ([]*TickerData, error) {
+func handleDay1DataFetching(fetcher *CryptoDataFetcher, tickerSymbol string, length int) ([]*TickerData, error) {
 	interval := "day"
-	url := fmt.Sprintf("%s/%s?interval=%s&length=%d", credentials.baseUrl, strings.ToLower(tickerSymbol), interval, length)
+	url := fmt.Sprintf("%s/%s?interval=%s&length=%d", fetcher.tiCredentials.baseUrl, strings.ToLower(tickerSymbol), interval, length)
 
-	resp, err := makeTokenInsightHistoricalDataCall(url, credentials.key)
+	resp, err := makeTokenInsightHistoricalDataCall(url, fetcher.tiCredentials.key)
 
 	if err != nil {
 		return nil, err
@@ -79,13 +91,13 @@ func handleDay1DataFetching(credentials *TokenInsightCredentials, tickerSymbol s
 	return results, nil
 }
 
-func handleHour4DataFetching(credentials *TokenInsightCredentials, tickerSymbol string, length int) ([]*TickerData, error) {
+func handleHour4DataFetching(fetcher *CryptoDataFetcher, tickerSymbol string, length int) ([]*TickerData, error) {
 	lengthMultiplier := 4
 	adjustedLength := lengthMultiplier * length
 	interval := "hour"
-	url := fmt.Sprintf("%s/%s?interval=%s&length=%d", credentials.baseUrl, strings.ToLower(tickerSymbol), interval, adjustedLength)
+	url := fmt.Sprintf("%s/%s?interval=%s&length=%d", fetcher.tiCredentials.baseUrl, strings.ToLower(tickerSymbol), interval, adjustedLength)
 
-	resp, err := makeTokenInsightHistoricalDataCall(url, credentials.key)
+	resp, err := makeTokenInsightHistoricalDataCall(url, fetcher.tiCredentials.key)
 
 	if err != nil {
 		return nil, err
@@ -101,15 +113,28 @@ func handleHour4DataFetching(credentials *TokenInsightCredentials, tickerSymbol 
 	return results, nil
 }
 
-func handleWeek1DataFetching(credentials *TokenInsightCredentials, tickerSymbol string, length int) ([]*TickerData, error) {
-	lengthMultiplier := 7
+func handleWeek1DataFetching(fetcher *CryptoDataFetcher, tickerSymbol string, length int) ([]*TickerData, error) {
+	tickerShorthand, ok := fetcher.tickerToShorthandMap[tickerSymbol]
 
-	// TODO find replacement for week 1
-	adjustedLength := 365
-	interval := "day"
-	url := fmt.Sprintf("%s/%s?interval=%s&length=%d", credentials.baseUrl, strings.ToLower(tickerSymbol), interval, adjustedLength)
+	if !ok {
+		return nil, errors.New("cant map crypto ticker")
+	}
 
-	resp, err := makeTokenInsightHistoricalDataCall(url, credentials.key)
+	periodId := "7DAY"
+	currTime := time.Now()
+	timeEnd := currTime.Format("2006-01-02T15:04:05")
+	timeStart := currTime.AddDate(0, 0, -length*7).Format("2006-01-02T15:04:05")
+
+	url := fmt.Sprintf(
+		"%s/BITSTAMP_SPOT_%s_USD/history?time_start=%s&time_end=%s&period_id=%s&limit=%d",
+		fetcher.coinApiCredentials.baseUrl,
+		tickerShorthand,
+		timeStart,
+		timeEnd,
+		periodId,
+		length)
+
+	resp, err := makeCoinApiHistoricalDataCall(url, fetcher.coinApiCredentials.key)
 
 	if err != nil {
 		return nil, err
@@ -117,10 +142,20 @@ func handleWeek1DataFetching(credentials *TokenInsightCredentials, tickerSymbol 
 
 	var results []*TickerData
 
-	// TODO find replacement for week 1
-	for i := len(resp.Data.MarketChart) - 1; len(results) < 52; i -= lengthMultiplier {
-		currRes := resp.Data.MarketChart[i]
-		result := NewTickerData(time.UnixMilli(currRes.Timestamp), currRes.Price)
+	for i := len(resp) - 1; len(results) < length; i-- {
+		currRes := resp[i]
+
+		// Layout representing the format of the input string
+		layout := "2006-01-02T15:04:05.9999999Z"
+
+		// Parse the string to a time.Time value
+		parsedTime, err := time.Parse(layout, currRes.TimePeriodEnd)
+
+		if err != nil {
+			return nil, err
+		}
+
+		result := NewTickerData(parsedTime, currRes.PriceClose)
 		results = append(results, result)
 	}
 
@@ -157,4 +192,36 @@ func makeTokenInsightHistoricalDataCall(url, key string) (*TokenInsightDataResp,
 	}
 
 	return &resp, nil
+}
+
+func makeCoinApiHistoricalDataCall(url, key string) ([]CoinApiDataResp, error) {
+	req, err := http.NewRequest("GET", url, nil)
+
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Add("accept", "application/json")
+	req.Header.Add("X-CoinAPI-Key", key)
+
+	res, err := http.DefaultClient.Do(req)
+
+	if err != nil {
+		return nil, err
+	}
+
+	defer res.Body.Close()
+	body, err := io.ReadAll(res.Body)
+
+	if err != nil {
+		return nil, err
+	}
+
+	var resp []CoinApiDataResp
+
+	if err := json.Unmarshal(body, &resp); err != nil {
+		return nil, err
+	}
+
+	return resp, nil
 }

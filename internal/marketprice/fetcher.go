@@ -59,11 +59,23 @@ func getStockDataFetcher() TickerDataFetcher {
 func getCryptoDataFetcher() TickerDataFetcher {
 	tiBaseUrl := os.Getenv("TI_BASE_URL")
 	tiApiKey := os.Getenv("TI_API_KEY")
+	coinApiBaseUrl := os.Getenv("COINAPI_BASE_URL")
+	coinApiKey := os.Getenv("COINAPI_API_KEY")
 
-	credentials := &TokenInsightCredentials{
+	tiCredentials := &TokenInsightCredentials{
 		baseUrl: tiBaseUrl,
 		key:     tiApiKey,
 	}
 
-	return NewCryptoDataFetcher(credentials)
+	coinApiCredentials := &CoinApiCredentials{
+		baseUrl: coinApiBaseUrl,
+		key:     coinApiKey,
+	}
+
+	tickerToShorthandMap := map[string]string{
+		"BITCOIN":  "BTC",
+		"ETHEREUM": "ETH",
+	}
+
+	return NewCryptoDataFetcher(tiCredentials, coinApiCredentials, tickerToShorthandMap)
 }
