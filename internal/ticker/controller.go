@@ -36,7 +36,7 @@ func RegisterTicker(c *gin.Context) {
 }
 
 func insertTicker(c context.Context, symbol, class string) error {
-	ctx, cancel := context.WithTimeout(c, 5*time.Second)
+	ctx, cancel := context.WithTimeout(c, 2*time.Second)
 	defer cancel()
 
 	query := `insert into ticker (symbol, class) values (?,?)`

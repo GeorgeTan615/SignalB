@@ -45,11 +45,28 @@ func RegisterBindingController(c *gin.Context) {
 }
 
 func insertBinding(c context.Context, tickerSymbol, timeframe, strategy string) error {
-	ctx, cancel := context.WithTimeout(c, 2*time.Second)
+	// Check if ticker is registered
+	checkCtx, cancel := context.WithTimeout(c, 2*time.Second)
 	defer cancel()
 
-	query := `insert into binding (ticker_symbol, timeframe, strategy) values (?,?,?)`
-	_, err := database.MySqlDB.ExecContext(ctx, query, tickerSymbol, timeframe, strategy)
+	checkQuery := `select count(symbol) 
+					from ticker 
+					where symbol = ?`
+
+	var count int
+	err := database.MySqlDB.QueryRowContext(checkCtx, checkQuery, tickerSymbol).Scan(&count)
+
+	if err != nil {
+		return err
+	}
+
+	if count == 0 {
+		return fmt.Errorf("%s is not registered", tickerSymbol)
+	}
+
+	// Register binding
+	registerQuery := `insert into binding (ticker_symbol, timeframe, strategy) values (?,?,?)`
+	_, err = database.MySqlDB.ExecContext(checkCtx, registerQuery, tickerSymbol, timeframe, strategy)
 
 	if err != nil {
 		return err

@@ -7,6 +7,14 @@ type TickerData struct {
 	Price float64
 }
 
+func NewTickerData(time time.Time, price float64) *TickerData {
+	return &TickerData{
+		Time:  time,
+		Price: price,
+	}
+}
+
 type TickerDataFetcher interface {
-	Fetch(timeframe, ticker string, length int) []*TickerData
+	Fetch(timeframe, ticker string, length int) ([]*TickerData, error)
+	FetchClass() string
 }

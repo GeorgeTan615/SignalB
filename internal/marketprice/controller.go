@@ -1,30 +1,86 @@
 package marketprice
 
 import (
+	"fmt"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
+	"github.com/signalb/internal/errors"
+	"github.com/signalb/internal/timeframe"
+	"github.com/signalb/utils"
 )
 
-func RefreshMarketpriceByTickerTimeframePriceController(c *gin.Context) {
-	timeframe := c.Param("timeframe")
+const (
+	defaultDataLength = 200
+)
+
+func RefreshMarketpriceByTickerTimeframeController(c *gin.Context) {
+	tf := c.Param("timeframe")
 	ticker := c.Param("ticker")
+	reqCtx := c.Request.Context()
 
-	_, _ = stockDF.Fetch(timeframe, ticker, 10)
+	if !utils.SliceContains[string](timeframe.AllowedTimeframes[:], tf) {
+		c.JSON(http.StatusBadRequest, errors.NewErrorResp(fmt.Sprintf("Timeframe must be of %v", timeframe.AllowedTimeframes)))
+		return
+	}
 
-	// based on ticker, fetch type to know how we gonna pull data
-	// probably can do some strategy pattern here
-	// stock repository
-	// crypto repository
+	res, err := refreshPriceByTickerTimeframe(reqCtx, ticker, tf)
 
-	// a DataRepository, should be able to take a timeframe, ticker, and how many data you want (length) and return length amount of records
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, errors.NewErrorRespWithErr("Error refreshing data", err))
+		return
+	}
 
-	// if we dont have 200 rows
-	// just populate 200 rows
+	c.JSON(http.StatusOK, res)
+}
 
-	// if we have 200 rows
-	// get 1 new one row and discard oldest 1 row
+func RefreshMarketpriceByTimeframeController(c *gin.Context) {
+	tf := c.Param("timeframe")
 
-	c.JSON(http.StatusOK, gin.H{})
+	if !utils.SliceContains[string](timeframe.AllowedTimeframes[:], tf) {
+		c.JSON(http.StatusBadRequest, errors.NewErrorResp(fmt.Sprintf("Timeframe must be of %v", timeframe.AllowedTimeframes)))
+		return
+	}
 
+	reqCtx := c.Request.Context()
+
+	res, err := refreshPriceByTimeframe(reqCtx, tf)
+
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, errors.NewErrorRespWithErr("Error refreshing data by timeframe", err))
+		return
+	}
+
+	c.JSON(http.StatusOK, res)
+}
+
+func GetMarketpriceDataByTickerTimeframeController(c *gin.Context) {
+	tf := c.Param("timeframe")
+	ticker := c.Param("ticker")
+	ctx := c.Request.Context()
+
+	class, err := getTickerClass(ctx, ticker)
+
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, errors.NewErrorRespWithErr("Error getting ticker class", err))
+		return
+	}
+
+	fetcher, ok := fetcherManager.getFetcherByTickerClass(class)
+
+	if !ok {
+		c.JSON(http.StatusInternalServerError, errors.NewErrorResp("Error getting data fetcher"))
+		return
+	}
+
+	res, err := fetcher.Fetch(tf, ticker, defaultDataLength)
+
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, errors.NewErrorRespWithErr("Error fetching data", err))
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"data": res,
+	})
 }

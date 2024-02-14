@@ -1,3 +1,8 @@
 package ticker
 
-var AllowedClasses = [...]string{"stock", "crypto"}
+const (
+	StockClass  = "stock"
+	CryptoClass = "crypto"
+)
+
+var AllowedClasses = [...]string{StockClass, CryptoClass}

@@ -5,60 +5,17 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"log"
 	"net/http"
-	"os"
 	"time"
 
-	"github.com/joho/godotenv"
+	"github.com/signalb/internal/ticker"
 	"github.com/signalb/internal/timeframe"
 )
-
-type MetadataResp struct {
-	Symbol   string
-	Interval string
-	Timezone string
-}
-
-type Result struct {
-	Date     string
-	Open     float64
-	Close    float64
-	High     float64
-	Low      float64
-	Volume   float64
-	AdjClose float64
-}
-
-type RapidApiResp struct {
-	Metadata MetadataResp
-	Results  []Result
-}
 
 type RapidApiCredentials struct {
 	baseUrl string
 	key     string
 	host    string
-}
-
-var stockDF *StockDataFetcher
-
-func init() {
-	err := godotenv.Load("../../.env")
-	if err != nil {
-		log.Fatalln("Failed to load .env file", err)
-	}
-	rapidApiBaseUrl := os.Getenv("RAPID_API_BASE_URL")
-	rapidApiKey := os.Getenv("RAPID_API_KEY")
-	rapidApiHost := os.Getenv("RAPID_API_HOST")
-
-	credentials := &RapidApiCredentials{
-		baseUrl: rapidApiBaseUrl,
-		key:     rapidApiKey,
-		host:    rapidApiHost,
-	}
-
-	stockDF = NewStockDataFetcher(credentials)
 }
 
 type StockDataFetcher struct {
@@ -79,40 +36,120 @@ func NewStockDataFetcher(credentials *RapidApiCredentials) *StockDataFetcher {
 	}
 }
 
+func (stockDF *StockDataFetcher) FetchClass() string {
+	return ticker.StockClass
+}
+
 func (stockDF *StockDataFetcher) Fetch(timeframe, tickerSymbol string, length int) ([]*TickerData, error) {
 	if length >= 1000 {
 		return nil, errors.New("maximum length is 1000")
 	}
 
-	var url string
-	mappedTimeframeVal := stockDF.timeframeMapping[timeframe]
-	if mappedTimeframeVal != "intraday" {
-		location, err := time.LoadLocation("America/New_York")
+	var (
+		results []*TickerData
+		err     error
+	)
+
+	timeframeVal := stockDF.timeframeMapping[timeframe]
+	if timeframeVal != "intraday" {
+		results, err = handleNonIntradayDataFetching(stockDF.credentials, timeframeVal, tickerSymbol, length)
+	} else {
+		results, err = handleIntradayDataFetching(stockDF.credentials, timeframeVal, tickerSymbol, length)
+	}
+
+	if err != nil {
+		return nil, err
+	}
+
+	return results, nil
+}
+
+func handleIntradayDataFetching(credentials *RapidApiCredentials, timeframeVal, tickerSymbol string, length int) ([]*TickerData, error) {
+	location, err := time.LoadLocation("America/New_York")
+
+	if err != nil {
+		return nil, err
+	}
+
+	adjustedLength := 4 * length
+	url := fmt.Sprintf("%s/%s?symbol=%s&interval=60min&maxreturn=%d", credentials.baseUrl, timeframeVal, tickerSymbol, adjustedLength)
+
+	resp, err := makeRapidAPIHistoricalDataCall(url, credentials.key, credentials.host)
+
+	if err != nil {
+		return nil, err
+	}
+
+	var results []*TickerData
+	for i := len(resp.Results) - 1; len(results) < length; i -= 4 {
+		currRes := resp.Results[i]
+		parsedTime, err := getDateStrToTime("2006-01-02 15:00", location, currRes.Date)
 
 		if err != nil {
 			return nil, err
 		}
 
-		today := time.Now().In(location)
-		dateEnd := fmt.Sprintf("%v-%v-%v", today.Year(), int(today.Month()), today.Day())
-
-		yesterday := today.AddDate(0, 0, -length)
-		dateStart := fmt.Sprintf("%v-%v-%v", yesterday.Year(), int(yesterday.Month()), yesterday.Day())
-
-		url = fmt.Sprintf("%s/%s?symbol=%s&dateStart=%s&dateEnd=%s", stockDF.credentials.baseUrl, mappedTimeframeVal, tickerSymbol, dateStart, dateEnd)
-	} else {
-		adjustedLength := 4 * length
-		url = fmt.Sprintf("%s/%s?symbol=%s&interval=60min&maxreturn=%d", stockDF.credentials.baseUrl, mappedTimeframeVal, tickerSymbol, adjustedLength)
+		results = append(results, NewTickerData(parsedTime, currRes.Close))
 	}
 
+	return results, nil
+
+}
+
+func handleNonIntradayDataFetching(credentials *RapidApiCredentials, timeframeVal, tickerSymbol string, length int) ([]*TickerData, error) {
+	location, err := time.LoadLocation("America/New_York")
+
+	if err != nil {
+		return nil, err
+	}
+
+	today := time.Now().In(location)
+	const lengthMultiplier = 4 // This is to ensure we always get enough data points
+	var yesterday time.Time
+
+	if timeframeVal == "daily" {
+		yesterday = today.AddDate(0, 0, -length*lengthMultiplier)
+	} else {
+		yesterday = today.AddDate(0, 0, -length*lengthMultiplier*7) // For Weekly data
+	}
+
+	dateEnd := fmt.Sprintf("%v-%v-%v", today.Year(), int(today.Month()), today.Day())
+	dateStart := fmt.Sprintf("%v-%v-%v", yesterday.Year(), int(yesterday.Month()), yesterday.Day())
+
+	url := fmt.Sprintf("%s/%s?symbol=%s&dateStart=%s&dateEnd=%s", credentials.baseUrl, timeframeVal, tickerSymbol, dateStart, dateEnd)
+
+	resp, err := makeRapidAPIHistoricalDataCall(url, credentials.key, credentials.host)
+
+	if err != nil {
+		return nil, err
+	}
+
+	var results []*TickerData
+	idx, jumpInterval := getStartIndexAndJumpInterval(timeframeVal, resp.Results)
+
+	for i := idx; len(results) < length; i -= jumpInterval {
+		currRes := resp.Results[i]
+		parsedTime, err := getDateStrToTime("2006-01-02", location, currRes.Date)
+
+		if err != nil {
+			return nil, err
+		}
+
+		results = append(results, NewTickerData(parsedTime, currRes.Close))
+	}
+
+	return results, nil
+}
+
+func makeRapidAPIHistoricalDataCall(url, key, host string) (*RapidApiResp, error) {
 	req, err := http.NewRequest("GET", url, nil)
 
 	if err != nil {
 		return nil, err
 	}
 
-	req.Header.Add("X-RapidAPI-Key", stockDF.credentials.key)
-	req.Header.Add("X-RapidAPI-Host", stockDF.credentials.host)
+	req.Header.Add("X-RapidAPI-Key", key)
+	req.Header.Add("X-RapidAPI-Host", host)
 
 	res, err := http.DefaultClient.Do(req)
 
@@ -133,6 +170,31 @@ func (stockDF *StockDataFetcher) Fetch(timeframe, tickerSymbol string, length in
 		return nil, err
 	}
 
-	fmt.Println(resp)
-	return nil, nil
+	return &resp, nil
+}
+
+func getStartIndexAndJumpInterval(timeframeVal string, results []Result) (int, int) {
+	if timeframeVal == "daily" {
+		return len(results) - 1, 1
+	}
+
+	// For weekly data, the data is not provided in exact weeks, thus we need to do some skipping
+	weeklyJumpInterval := 2
+	if len(results) < 2 {
+		return len(results) - 1, weeklyJumpInterval
+	}
+
+	lastResult := results[len(results)-1]
+	secondLastResult := results[len(results)-2]
+
+	// For weekly data, we need to see which data to start jumping from
+	if secondLastResult.Close == lastResult.Close {
+		return len(results) - 2, weeklyJumpInterval
+	} else {
+		return len(results) - 1, weeklyJumpInterval
+	}
+}
+
+func getDateStrToTime(layout string, loc *time.Location, dateStr string) (time.Time, error) {
+	return time.ParseInLocation(layout, dateStr, loc)
 }
