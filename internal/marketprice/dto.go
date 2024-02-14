@@ -16,9 +16,24 @@ type Result struct {
 	AdjClose float64
 }
 
-type RapidApiResp struct {
+type RapidApiDataResp struct {
 	Metadata MetadataResp
 	Results  []Result
+}
+
+type MarketChartResp struct {
+	Price     float64 `json:"price"`
+	Timestamp int64   `json:"timestamp"`
+}
+
+type TIDataResp struct {
+	Name        string            `json:"name"`
+	Symbol      string            `json:"symbol"`
+	MarketChart []MarketChartResp `json:"market_chart"`
+}
+
+type TokenInsightDataResp struct {
+	Data TIDataResp `json:"data"`
 }
 
 type RefreshPriceResp struct {

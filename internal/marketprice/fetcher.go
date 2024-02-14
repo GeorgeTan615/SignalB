@@ -37,10 +37,9 @@ func init() {
 	}
 
 	stockDF := getStockDataFetcher()
+	cryptoDF := getCryptoDataFetcher()
 
-	// TODO get crypto df
-
-	fetcherManager = NewFetcherManager(stockDF)
+	fetcherManager = NewFetcherManager(stockDF, cryptoDF)
 }
 
 func getStockDataFetcher() TickerDataFetcher {
@@ -55,4 +54,16 @@ func getStockDataFetcher() TickerDataFetcher {
 	}
 
 	return NewStockDataFetcher(credentials)
+}
+
+func getCryptoDataFetcher() TickerDataFetcher {
+	tiBaseUrl := os.Getenv("TI_BASE_URL")
+	tiApiKey := os.Getenv("TI_API_KEY")
+
+	credentials := &TokenInsightCredentials{
+		baseUrl: tiBaseUrl,
+		key:     tiApiKey,
+	}
+
+	return NewCryptoDataFetcher(credentials)
 }

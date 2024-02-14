@@ -114,23 +114,29 @@ func refreshData(c context.Context, ticker, timeframe string, data []*TickerData
 		return err
 	}
 
+	insCtx, cancel := context.WithTimeout(c, 1*time.Minute)
+	defer cancel()
+	tx, err := database.MySqlDB.BeginTx(insCtx, nil)
+
+	if err != nil {
+		return err
+	}
+
 	// Add the fresh data
 	insQuery := fmt.Sprintf(`insert into %s (ticker_symbol,time,price)
 						values (?,?,?)`, table)
-
 	for i := len(data) - 1; i > -1; i-- {
 		currData := data[i]
-		insCtx, cancel := context.WithTimeout(c, 2*time.Second)
-		defer cancel()
 
-		_, err = database.MySqlDB.ExecContext(insCtx, insQuery, ticker, currData.Time, currData.Price)
+		_, err = tx.Exec(insQuery, ticker, currData.Time, currData.Price)
 
 		if err != nil {
+			tx.Rollback()
 			return err
 		}
 	}
 
-	return nil
+	return tx.Commit()
 }
 
 func refreshPriceByTimeframe(c context.Context, timeframe string) ([]*RefreshPriceResp, error) {
@@ -170,6 +176,7 @@ func refreshPriceByTimeframe(c context.Context, timeframe string) ([]*RefreshPri
 			if len(results) == len(tickers) {
 				return results, nil
 			}
+
 		case err := <-chErr:
 			return nil, err
 

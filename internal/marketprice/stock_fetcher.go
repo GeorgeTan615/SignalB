@@ -41,21 +41,24 @@ func (stockDF *StockDataFetcher) FetchClass() string {
 }
 
 func (stockDF *StockDataFetcher) Fetch(timeframe, tickerSymbol string, length int) ([]*TickerData, error) {
-	if length >= 1000 {
-		return nil, errors.New("maximum length is 1000")
+	if length > 200 {
+		return nil, errors.New("maximum length is 200")
 	}
 
 	var (
-		results []*TickerData
-		err     error
+		results       []*TickerData
+		err           error
+		fetchStrategy func(credentials *RapidApiCredentials, timeframeVal, tickerSymbol string, length int) ([]*TickerData, error)
 	)
 
 	timeframeVal := stockDF.timeframeMapping[timeframe]
 	if timeframeVal != "intraday" {
-		results, err = handleNonIntradayDataFetching(stockDF.credentials, timeframeVal, tickerSymbol, length)
+		fetchStrategy = handleNonIntradayDataFetching
 	} else {
-		results, err = handleIntradayDataFetching(stockDF.credentials, timeframeVal, tickerSymbol, length)
+		fetchStrategy = handleIntradayDataFetching
 	}
+
+	results, err = fetchStrategy(stockDF.credentials, timeframeVal, tickerSymbol, length)
 
 	if err != nil {
 		return nil, err
@@ -93,7 +96,6 @@ func handleIntradayDataFetching(credentials *RapidApiCredentials, timeframeVal, 
 	}
 
 	return results, nil
-
 }
 
 func handleNonIntradayDataFetching(credentials *RapidApiCredentials, timeframeVal, tickerSymbol string, length int) ([]*TickerData, error) {
@@ -141,7 +143,7 @@ func handleNonIntradayDataFetching(credentials *RapidApiCredentials, timeframeVa
 	return results, nil
 }
 
-func makeRapidAPIHistoricalDataCall(url, key, host string) (*RapidApiResp, error) {
+func makeRapidAPIHistoricalDataCall(url, key, host string) (*RapidApiDataResp, error) {
 	req, err := http.NewRequest("GET", url, nil)
 
 	if err != nil {
@@ -164,7 +166,7 @@ func makeRapidAPIHistoricalDataCall(url, key, host string) (*RapidApiResp, error
 		return nil, err
 	}
 
-	var resp RapidApiResp
+	var resp RapidApiDataResp
 
 	if err := json.Unmarshal(body, &resp); err != nil {
 		return nil, err
