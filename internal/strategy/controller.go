@@ -11,3 +11,7 @@ func GetStrategiesController(c *gin.Context) {
 		"strategies": AllowedStrategies,
 	})
 }
+
+func EvaluateStrategiesByTimeframeController(c *gin.Context) {
+
+}

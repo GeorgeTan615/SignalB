@@ -24,6 +24,7 @@ func InitRoutes(router *gin.Engine) {
 	strategies := router.Group("/api/strategies")
 	{
 		strategies.GET("", strategy.GetStrategiesController)
+		strategies.GET("/:timeframe/evaluate", strategy.EvaluateStrategiesByTimeframeController)
 	}
 
 	bindings := router.Group("/api/bindings")

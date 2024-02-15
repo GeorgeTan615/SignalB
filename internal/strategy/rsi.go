@@ -8,12 +8,12 @@ import (
 )
 
 type RSIStrategy struct {
-	Level    int
+	Level    float64
 	Strength StrategyStrength
 	Type     StrategyType
 }
 
-func NewRSIStrategy(level int, strength StrategyStrength, typ StrategyType) *RSIStrategy {
+func NewRSIStrategy(level float64, strength StrategyStrength, typ StrategyType) *RSIStrategy {
 	return &RSIStrategy{
 		Level:    level,
 		Strength: strength,
@@ -22,30 +22,38 @@ func NewRSIStrategy(level int, strength StrategyStrength, typ StrategyType) *RSI
 }
 
 func (s *RSIStrategy) GetName() string {
-	return fmt.Sprintf("%s%d", "rsi", s.Level)
+	return fmt.Sprintf("%s%0f", "rsi", s.Level)
 }
 
-func (s *RSIStrategy) Evaluate(data []*marketprice.TickerData) bool {
-	// TODO ensure all data is ascending order
+// Data must be in ascending order
+func (s *RSIStrategy) Evaluate(data []*marketprice.TickerData) (string, bool) {
 	if len(data) != 200 {
 		log.Println("Number of data should be 200")
 	}
 
-	// TODO continue
 	rsi := calculateRSI(data, len(data))
 
-	return true
+	return s.getSuccessMessage(rsi), s.isRSIReachedLevel(rsi)
 }
 
-func (s *RSIStrategy) GetStrength() StrategyStrength {
-	return s.Strength
+func (s *RSIStrategy) getSuccessMessage(rsi float64) string {
+	if s.Type == Notify {
+		return fmt.Sprintf("RSI(%0.2f) reached %d levels", rsi, int(s.Level))
+	} else {
+		return fmt.Sprintf("%s %s, RSI(%0.2f) in %0f zone", s.Strength, s.Type, rsi, s.Level)
+	}
 }
 
-func (s *RSIStrategy) GetType() StrategyType {
-	return s.Type
+func (s *RSIStrategy) isRSIReachedLevel(rsi float64) bool {
+	if s.Type == Sell {
+		return rsi >= s.Level
+	} else if s.Type == Buy {
+		return rsi <= s.Level
+	} else {
+		return rsi >= s.Level || rsi <= s.Level
+	}
 }
 
-// Calculate RSI for a given set of prices and a specified period
 func calculateRSI(data []*marketprice.TickerData, period int) float64 {
 	gain := 0.0
 	loss := 0.0

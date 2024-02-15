@@ -6,8 +6,6 @@ import (
 	"github.com/signalb/internal/marketprice"
 )
 
-var AllowedStrategies = [...]string{"ema200", "rsi20"}
-
 type StrategyStrength string
 type StrategyType string
 
@@ -24,11 +22,10 @@ const (
 
 type Strategy interface {
 	GetName() string
-	Evaluate(data []*marketprice.TickerData) bool
-	GetStrength() StrategyStrength
-	GetType() StrategyType
+	Evaluate(data []*marketprice.TickerData) (string, bool)
 }
 
+var AllowedStrategies []string
 var strategyManager *StrategyManager
 
 type StrategyManager struct {
@@ -41,6 +38,7 @@ func NewStrategyManager(strategies ...Strategy) *StrategyManager {
 
 	for _, strategy := range strategies {
 		nameToStrategyMap[strategy.GetName()] = strategy
+		AllowedStrategies = append(AllowedStrategies, strategy.GetName())
 	}
 
 	return &StrategyManager{
