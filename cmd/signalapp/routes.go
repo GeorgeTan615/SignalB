@@ -21,12 +21,6 @@ func InitRoutes(router *gin.Engine) {
 		tickers.GET("", ticker.GetTickers)
 	}
 
-	strategies := router.Group("/api/strategies")
-	{
-		strategies.GET("", strategy.GetStrategiesController)
-		strategies.GET("/:timeframe/evaluate", strategy.EvaluateStrategiesByTimeframeController)
-	}
-
 	bindings := router.Group("/api/bindings")
 	{
 		bindings.POST("", binding.RegisterBindingController)
@@ -39,6 +33,12 @@ func InitRoutes(router *gin.Engine) {
 		data.POST("/:timeframe/:ticker", marketprice.RefreshMarketpriceByTickerTimeframeController)
 		data.POST("/:timeframe", marketprice.RefreshMarketpriceByTimeframeController)
 		data.GET("/:timeframe/:ticker", marketprice.GetMarketpriceDataByTickerTimeframeController)
+	}
+
+	strategies := router.Group("/api/strategies")
+	{
+		strategies.GET("", strategy.GetStrategiesController)
+		strategies.GET("/:timeframe/evaluate", strategy.EvaluateTickerStrategiesByTimeframeController)
 	}
 
 }

@@ -2,8 +2,6 @@ package strategy
 
 import (
 	"fmt"
-
-	"github.com/signalb/internal/marketprice"
 )
 
 type StrategyStrength string
@@ -20,9 +18,14 @@ const (
 	Notify StrategyType = "Notify"
 )
 
+type EvaluationResult struct {
+	IsFulfilled       bool
+	EvaluationMessage string
+}
+
 type Strategy interface {
 	GetName() string
-	Evaluate(data []*marketprice.TickerData) (string, bool)
+	Evaluate(data []float64) *EvaluationResult
 }
 
 var AllowedStrategies []string
@@ -42,7 +45,8 @@ func NewStrategyManager(strategies ...Strategy) *StrategyManager {
 	}
 
 	return &StrategyManager{
-		Strategies: strategies,
+		Strategies:        strategies,
+		NameToStrategyMap: nameToStrategyMap,
 	}
 }
 
@@ -63,6 +67,12 @@ func init() {
 		NewRSIStrategy(30, Strong, Buy),
 		NewRSIStrategy(70, Strong, Sell),
 		NewRSIStrategy(80, VeryStrong, Sell)
+
+	// EMA
+
+	// FIBONACCI
+
+	// MOMENTUM, PRICE HUGE DIFFERENCE
 
 	strategyManager = NewStrategyManager(
 		rsi20, rsi30, rsi70, rsi80,

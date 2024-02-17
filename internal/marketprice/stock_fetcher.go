@@ -2,7 +2,6 @@ package marketprice
 
 import (
 	"encoding/json"
-	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -41,8 +40,8 @@ func (stockDF *StockDataFetcher) FetchClass() string {
 }
 
 func (stockDF *StockDataFetcher) Fetch(timeframe, tickerSymbol string, length int) ([]*TickerData, error) {
-	if length > 200 {
-		return nil, errors.New("maximum length is 200")
+	if length > RefreshAllDataLength {
+		return nil, fmt.Errorf("maximum length is %d", RefreshAllDataLength)
 	}
 
 	var (

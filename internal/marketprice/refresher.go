@@ -12,7 +12,7 @@ import (
 )
 
 const (
-	RefreshAllDataLength   = 200
+	RefreshAllDataLength   = 300
 	UpdateLatestDataLength = 1
 )
 
@@ -204,6 +204,8 @@ func getTickersByTimeframe(c context.Context, timeframe string) ([]*database.Tic
 	if err != nil {
 		return nil, err
 	}
+
+	defer res.Close()
 
 	var tickers []*database.Ticker
 	for res.Next() {
