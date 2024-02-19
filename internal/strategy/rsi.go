@@ -47,11 +47,11 @@ func (s *RSIStrategy) Evaluate(data []float64) *EvaluationResult {
 
 func (s *RSIStrategy) getEvaluationMessage(rsi float64, isSuccess bool) string {
 	if !isSuccess {
-		return fmt.Sprintf("RSI(%0.9f) did not reach %0.f levels", rsi, s.Level)
+		return fmt.Sprintf("RSI(%0.2f) did not reach %0.f levels", rsi, s.Level)
 	}
 
 	if s.Type == Notify {
-		return fmt.Sprintf("RSI(%0.2f) reached %d levels", rsi, int(s.Level))
+		return fmt.Sprintf("RSI(%0.2f) reached %0.f levels", rsi, s.Level)
 	} else {
 		return fmt.Sprintf("%s %s, RSI(%0.2f) in %0.f zone", s.Strength, s.Type, rsi, s.Level)
 	}

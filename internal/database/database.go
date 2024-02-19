@@ -11,7 +11,7 @@ import (
 
 var MySqlDB *sql.DB
 
-func init() {
+func InitDB() {
 	err := godotenv.Load("../../.env")
 	if err != nil {
 		log.Fatalln("Failed to load .env file", err)
