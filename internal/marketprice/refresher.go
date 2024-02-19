@@ -75,7 +75,7 @@ func isDataOutdated(c context.Context, tickerSymbol, timeframe string) bool {
 	var count int
 	err := database.MySqlDB.QueryRowContext(ctx, query, tickerSymbol).Scan(&count)
 
-	return err != nil || count != 200
+	return err != nil || count != RefreshAllDataLength
 }
 
 func getTickerClass(c context.Context, ticker string) (string, error) {

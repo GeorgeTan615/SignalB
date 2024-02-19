@@ -10,10 +10,6 @@ import (
 	"github.com/signalb/utils"
 )
 
-const (
-	defaultDataLength = 200
-)
-
 func RefreshMarketpriceByTickerTimeframeController(c *gin.Context) {
 	tf := c.Param("timeframe")
 	ticker := c.Param("ticker")
@@ -73,7 +69,7 @@ func GetMarketpriceDataByTickerTimeframeController(c *gin.Context) {
 		return
 	}
 
-	res, err := fetcher.Fetch(tf, ticker, defaultDataLength)
+	res, err := fetcher.Fetch(tf, ticker, RefreshAllDataLength)
 
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, errors.NewErrorRespWithErr("Error fetching data", err))
