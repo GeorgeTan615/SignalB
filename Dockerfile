@@ -47,7 +47,7 @@ FROM alpine:latest
 # Installs ca-certificates within the Alpine image, allowing your application to make HTTPS requests.
 # The --no-cache option prevents the package manager cache from being stored in the final image, 
 # reducing size.
-RUN apk --no-cache add ca-certificates
+RUN apk --no-cache add ca-certificates tzdata
 ADD https://github.com/golang/go/raw/master/lib/time/zoneinfo.zip /zoneinfo.zip
 ENV ZONEINFO /zoneinfo.zip
 
