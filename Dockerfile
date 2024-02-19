@@ -48,8 +48,6 @@ FROM alpine:latest
 # The --no-cache option prevents the package manager cache from being stored in the final image, 
 # reducing size.
 RUN apk --no-cache add ca-certificates tzdata
-ADD https://github.com/golang/go/raw/master/lib/time/zoneinfo.zip /zoneinfo.zip
-ENV ZONEINFO /zoneinfo.zip
 
 WORKDIR /root/
 
