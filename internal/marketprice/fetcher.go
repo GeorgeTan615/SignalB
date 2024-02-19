@@ -33,7 +33,7 @@ func (fm *FetcherManager) getFetcherByTickerClass(class string) (TickerDataFetch
 func init() {
 	err := godotenv.Load("../../.env")
 	if err != nil {
-		log.Fatalln("Failed to load .env file", err)
+		log.Println("Failed to load .env file", err)
 	}
 
 	stockDF := getStockDataFetcher()

@@ -20,7 +20,7 @@ func InitBot() {
 	err := godotenv.Load("../../.env")
 
 	if err != nil {
-		log.Fatalln("Failed to load .env file", err)
+		log.Println("Failed to load .env file", err)
 	}
 
 	bot, err := tgbotapi.NewBotAPI(os.Getenv("TELEGRAM_API_TOKEN"))

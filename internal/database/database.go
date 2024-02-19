@@ -14,7 +14,7 @@ var MySqlDB *sql.DB
 func InitDB() {
 	err := godotenv.Load("../../.env")
 	if err != nil {
-		log.Fatalln("Failed to load .env file", err)
+		log.Println("Failed to load .env file", err)
 	}
 
 	db, err := sql.Open("mysql", os.Getenv("DSN"))
