@@ -163,7 +163,7 @@ func refreshPriceByTimeframe(c context.Context, timeframe string) ([]*RefreshPri
 
 			if err != nil {
 				chErr <- err
-				log.Printf("Error refreshing price for %s %s", ticker.Symbol, timeframe)
+				log.Printf("Error refreshing price for %s %s %s", ticker.Symbol, timeframe, err)
 			} else {
 				chRes <- result
 				log.Printf("Finished refreshing price for %s %s", ticker.Symbol, timeframe)
