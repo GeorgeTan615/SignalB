@@ -53,5 +53,5 @@ jobs:
           --set-env-vars COINAPI_BASE_URL=${{ secrets.COINAPI_BASE_URL }} \
           --set-env-vars COINAPI_API_KEY=${{ secrets.COINAPI_API_KEY }} \
           --set-env-vars TELEGRAM_API_TOKEN=${{ secrets.TELEGRAM_API_TOKEN }} \
-          --set-env-vars TELEGRAM_USER_ID=${{ secrets.TELEGRAM_USER_ID }} \
+          --set-env-vars TELEGRAM_CHAT_ID=${{ secrets.TELEGRAM_CHAT_ID }} \
           --project ${{ secrets.GCP_PROJECT_ID }}
