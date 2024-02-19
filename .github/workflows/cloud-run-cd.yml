@@ -44,4 +44,14 @@ jobs:
           --memory 256Mi \
           --platform managed \
           --allow-unauthenticated \
+          --set-env-vars DSN=${{ secrets.DSN }} \
+          --set-env-vars RAPID_API_BASE_URL=${{ secrets.RAPID_API_BASE_URL }} \
+          --set-env-vars RAPID_API_KEY=${{ secrets.RAPID_API_KEY }} \
+          --set-env-vars RAPID_API_HOST=${{ secrets.RAPID_API_HOST }} \
+          --set-env-vars TI_BASE_URL=${{ secrets.TI_BASE_URL }} \
+          --set-env-vars TI_API_KEY=${{ secrets.TI_API_KEY }} \
+          --set-env-vars COINAPI_BASE_URL=${{ secrets.COINAPI_BASE_URL }} \
+          --set-env-vars COINAPI_API_KEY=${{ secrets.COINAPI_API_KEY }} \
+          --set-env-vars TELEGRAM_API_TOKEN=${{ secrets.TELEGRAM_API_TOKEN }} \
+          --set-env-vars TELEGRAM_USER_ID=${{ secrets.TELEGRAM_USER_ID }} \
           --project ${{ secrets.GCP_PROJECT_ID }}

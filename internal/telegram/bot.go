@@ -30,7 +30,7 @@ func InitBot() {
 	}
 
 	bot.Debug = true
-	chatId, err := strconv.ParseInt(os.Getenv("TELEGRAM_USER_ID"), 10, 64)
+	chatId, err := strconv.ParseInt(os.Getenv("TELEGRAM_CHAT_ID"), 10, 64)
 
 	if err != nil {
 		log.Panic(err)
