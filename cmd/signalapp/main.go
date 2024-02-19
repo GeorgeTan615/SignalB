@@ -13,5 +13,5 @@ func main() {
 	database.InitDB()
 	defer database.MySqlDB.Close()
 
-	router.Run("localhost:8181")
+	router.Run("localhos:8080")
 }
