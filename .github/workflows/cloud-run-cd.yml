@@ -38,9 +38,9 @@ jobs:
       - name: Deploy
         run: |
           gcloud run deploy signalb \
-          --region asia-east1 \
+          --region asia-southeast1 \
           --image gcr.io/${{ secrets.GCP_PROJECT_ID }}/signalb \
-          --cpu 4 \
+          --cpu 3 \
           --memory 512Mi \
           --platform managed \
           --allow-unauthenticated \
