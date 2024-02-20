@@ -7,7 +7,7 @@ on:
     - cron: '0 0 * * 0'    # Every Sunday at midnight UTC
     
 env:
-  REFRESH_DATA_H4_URL: ${{ secrets.REFRESH_DATA_URL }}
+  REFRESH_DATA_H4_URL: ${{ secrets.REFRESH_DATA_H4_URL }}
   REFRESH_DATA_D1_URL: ${{ secrets.REFRESH_DATA_D1_URL }}
   REFRESH_DATA_W1_URL: ${{ secrets.REFRESH_DATA_W1_URL }}
   EVALUATE_STRATEGIES_H4_URL: ${{ secrets.EVALUATE_STRATEGIES_H4_URL }}
