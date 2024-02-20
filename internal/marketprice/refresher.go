@@ -28,12 +28,15 @@ func refreshPriceByTickerTimeframe(c context.Context, ticker, timeframe string) 
 
 func refreshPriceByTickerClassTimeframe(c context.Context, ticker, class, timeframe string) (*RefreshPriceResp, error) {
 	// Get optimal number of data that needs to be refreshed
-	var length int
-	if isDataOutdated(c, ticker, timeframe) {
-		length = RefreshAllDataLength
-	} else {
-		length = UpdateLatestDataLength
-	}
+	// var length int
+	// if isDataOutdated(c, ticker, timeframe) {
+	// 	length = RefreshAllDataLength
+	// } else {
+	// 	length = UpdateLatestDataLength
+	// }
+
+	// Just get all data since its inexpensive, dont have to deal with stale data
+	length := RefreshAllDataLength
 
 	// Get the fetcher we need based on class as we have different ways of fetching data
 	fetcher, ok := fetcherManager.getFetcherByTickerClass(class)
@@ -62,20 +65,20 @@ func refreshPriceByTickerClassTimeframe(c context.Context, ticker, class, timefr
 	}, nil
 }
 
-func isDataOutdated(c context.Context, tickerSymbol, timeframe string) bool {
-	table := fmt.Sprintf("price_%s", strings.ToLower(timeframe))
-	query := fmt.Sprintf(`select count(ticker_symbol)
-					from price_%s
-					where ticker_symbol = ?`, table)
+// func isDataOutdated(c context.Context, tickerSymbol, timeframe string) bool {
+// 	table := fmt.Sprintf("price_%s", strings.ToLower(timeframe))
+// 	query := fmt.Sprintf(`select count(ticker_symbol)
+// 					from price_%s
+// 					where ticker_symbol = ?`, table)
 
-	ctx, cancel := context.WithTimeout(c, 2*time.Second)
-	defer cancel()
+// 	ctx, cancel := context.WithTimeout(c, 2*time.Second)
+// 	defer cancel()
 
-	var count int
-	err := database.MySqlDB.QueryRowContext(ctx, query, tickerSymbol).Scan(&count)
+// 	var count int
+// 	err := database.MySqlDB.QueryRowContext(ctx, query, tickerSymbol).Scan(&count)
 
-	return err != nil || count != RefreshAllDataLength
-}
+// 	return err != nil || count != RefreshAllDataLength
+// }
 
 func getTickerClass(c context.Context, ticker string) (string, error) {
 	query := `select class 
