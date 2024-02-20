@@ -5,9 +5,9 @@ on:
     # - cron: '0 */4 * * *'  # Every 4 hours
     # - cron: '0 23 * * *'    # Every day at midnight UTC
     # - cron: '0 0 * * 0'    # Every Sunday at midnight UTC
-    - cron: '*/5 * * * *'  # Every 4 hours
-    - cron: '*/5 * * * *'    # Every day at midnight UTC
-    - cron: '*/5 * * * *'    # Every Sunday at midnight UTC
+    - cron: '0 */4 * * *'  # Every 4 hours
+    - cron: '0 */4 * * *'    # Every day at midnight UTC
+    - cron: '0 */4 * * *'    # Every Sunday at midnight UTC
     
 env:
   REFRESH_DATA_H4_URL: ${{ secrets.REFRESH_DATA_H4_URL }}
