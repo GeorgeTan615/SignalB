@@ -76,7 +76,6 @@ func calculateRSI(data []float64, length int) float64 {
 	period := length
 	var averageGain, averageLoss, rs float64
 
-	// Calculate initial average gain and loss
 	for i := 1; i <= period; i++ {
 		diff := prices[i] - prices[i-1]
 		if diff > 0 {
