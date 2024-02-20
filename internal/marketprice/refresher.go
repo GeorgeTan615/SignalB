@@ -48,7 +48,6 @@ func refreshPriceByTickerClassTimeframe(c context.Context, ticker, class, timefr
 		return nil, err
 	}
 
-	// Refresh data in database
 	err = refreshData(c, ticker, timeframe, res)
 
 	if err != nil {
@@ -126,9 +125,7 @@ func refreshData(c context.Context, ticker, timeframe string, data []*TickerData
 	}
 
 	finalQuery := builder.String()
-	insCtx, cancel := context.WithTimeout(c, 1*time.Minute)
-	defer cancel()
-	tx, err := database.MySqlDB.BeginTx(insCtx, nil)
+	tx, err := database.MySqlDB.Begin()
 
 	if err != nil {
 		return err
@@ -172,7 +169,7 @@ func refreshPriceByTimeframe(c context.Context, timeframe string) ([]*RefreshPri
 		}(ticker, timeframe, chRes, chErr)
 	}
 
-	timeTicker := time.NewTicker(1 * time.Minute)
+	timeTicker := time.NewTicker(10 * time.Second)
 	defer timeTicker.Stop()
 	for {
 		select {

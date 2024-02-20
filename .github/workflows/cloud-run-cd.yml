@@ -40,8 +40,8 @@ jobs:
           gcloud run deploy signalb \
           --region asia-east1 \
           --image gcr.io/${{ secrets.GCP_PROJECT_ID }}/signalb \
-          --cpu 2 \
-          --memory 256Mi \
+          --cpu 4 \
+          --memory 512Mi \
           --platform managed \
           --allow-unauthenticated \
           --set-env-vars DSN=${{ secrets.DSN }} \
@@ -55,4 +55,6 @@ jobs:
           --set-env-vars TELEGRAM_API_TOKEN=${{ secrets.TELEGRAM_API_TOKEN }} \
           --set-env-vars TELEGRAM_CHAT_ID=${{ secrets.TELEGRAM_CHAT_ID }} \
           --set-env-vars GOMAXPROCS=2 \
+          --min-instances 0
+          --max-instances 1
           --project ${{ secrets.GCP_PROJECT_ID }}
