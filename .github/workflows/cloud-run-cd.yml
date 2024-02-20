@@ -40,7 +40,7 @@ jobs:
           gcloud run deploy signalb \
           --region asia-southeast1 \
           --image gcr.io/${{ secrets.GCP_PROJECT_ID }}/signalb \
-          --cpu 3 \
+          --cpu 2 \
           --memory 512Mi \
           --platform managed \
           --allow-unauthenticated \
