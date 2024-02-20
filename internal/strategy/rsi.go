@@ -8,8 +8,8 @@ import (
 )
 
 const (
-	zoneTolerancePercentage = 10
-	length                  = 14
+	zoneTolerance = 2
+	length        = 14
 )
 
 type RSIStrategy struct {
@@ -58,14 +58,15 @@ func (s *RSIStrategy) getEvaluationMessage(rsi float64, isSuccess bool) string {
 }
 
 func (s *RSIStrategy) isRSIReachedLevel(rsi float64) bool {
+	upperZone := s.Level + zoneTolerance
+	lowerZone := s.Level - zoneTolerance
+
 	if s.Type == Sell {
-		return rsi >= s.Level
+		return rsi >= lowerZone
 	} else if s.Type == Buy {
-		return rsi <= s.Level
+		return rsi <= upperZone
 	} else {
-		extra10Percent := (100.00 + zoneTolerancePercentage) / 100
-		less10Percent := (100.00 - zoneTolerancePercentage) / 100
-		return s.Level*extra10Percent >= rsi && rsi >= s.Level*less10Percent
+		return upperZone >= rsi && rsi >= lowerZone
 	}
 }
 
