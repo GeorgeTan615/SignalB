@@ -39,7 +39,7 @@ jobs:
         run: |
           curl -X GET $EVALUATE_STRATEGIES_D1_URL
 
-  refresh-evaluate-W1:
+  refresh-evaluate-w1:
     runs-on: ubuntu-latest
 
     steps:
