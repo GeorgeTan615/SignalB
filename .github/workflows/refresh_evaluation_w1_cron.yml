@@ -1,0 +1,22 @@
+name: Refresh Data and Evaluate Strategies W1
+
+on:
+  schedule:
+    - cron: '0 23 * * 0'    # Every Sunday at 2300 UTC
+    
+env:
+  REFRESH_DATA_W1_URL: ${{ secrets.REFRESH_DATA_W1_URL }}
+  EVALUATE_STRATEGIES_W1_URL: ${{ secrets.EVALUATE_STRATEGIES_W1_URL }}
+  
+jobs:
+  refresh-evaluate-w1:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Refresh Data for W1 Timeframe
+        run: |
+          curl -X POST $REFRESH_DATA_W1_URL
+
+      - name: Evaluate Strategies for Tickers in W1 Timeframe
+        run: |
+          curl -X GET $EVALUATE_STRATEGIES_W1_URL
