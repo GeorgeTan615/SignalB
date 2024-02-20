@@ -50,23 +50,17 @@ func formatTickersStrategiesOutput(timeframe string, results map[string][]*Strat
 	// Build out the content message
 	var resultContentBuilder strings.Builder
 	for ticker, strategyResps := range results {
-		var strategyResultBuilder strings.Builder
+		// Ticker
+		resultContentBuilder.WriteString(fmt.Sprintf("<b>%s</b>\n", ticker))
 		for _, strategyResp := range strategyResps {
+			var resultLogo string
 			if strategyResp.IsFulfilled {
-				// Strategy result
-				strategyResultBuilder.WriteString(
-					fmt.Sprintf("<code>🎯 %s</code>\n",
-						strategyResp.EvaluationMessage))
+				resultLogo = "✅"
+			} else {
+				resultLogo = "❌"
 			}
-		}
-
-		// Only add results when >=1 strategies fulfilled
-		strategyResult := strategyResultBuilder.String()
-		if strategyResult != "" {
-			// Ticker
-			resultContentBuilder.WriteString(fmt.Sprintf("<b>%s</b>\n", ticker))
-			// Ticker's strategy results
-			resultContentBuilder.WriteString(strategyResult + "\n")
+			resultContentBuilder.WriteString(
+				fmt.Sprintf("<code>%s %s</code>\n", resultLogo, strategyResp.EvaluationMessage))
 		}
 	}
 
