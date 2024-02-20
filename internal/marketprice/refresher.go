@@ -12,7 +12,7 @@ import (
 )
 
 const (
-	RefreshAllDataLength   = 300
+	RefreshAllDataLength   = 250
 	UpdateLatestDataLength = 1
 )
 
