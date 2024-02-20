@@ -11,6 +11,10 @@ import (
 	"github.com/signalb/internal/timeframe"
 )
 
+const (
+	rapidApiIntradayMaximumLength = 250 // Intraday max is 1000
+)
+
 type RapidApiCredentials struct {
 	baseUrl string
 	key     string
@@ -71,6 +75,10 @@ func handleIntradayDataFetching(credentials *RapidApiCredentials, timeframeVal, 
 
 	if err != nil {
 		return nil, err
+	}
+
+	if length > rapidApiIntradayMaximumLength {
+		length = rapidApiIntradayMaximumLength
 	}
 
 	adjustedLength := 4 * length
