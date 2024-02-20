@@ -113,13 +113,13 @@ func handleNonIntradayDataFetching(credentials *RapidApiCredentials, timeframeVa
 	}
 
 	today := time.Now().In(location)
-	const lengthMultiplier = 4 // This is to ensure we always get enough data points
+	lengthMultiplier := 2 // This is to ensure we always get enough data points
 	var yesterday time.Time
 
 	if timeframeVal == "daily" {
 		yesterday = today.AddDate(0, 0, -length*lengthMultiplier)
 	} else {
-		yesterday = today.AddDate(0, 0, -length*lengthMultiplier*7) // For Weekly data
+		yesterday = today.AddDate(0, 0, -length*lengthMultiplier*7)
 	}
 
 	dateEnd := fmt.Sprintf("%v-%v-%v", today.Year(), int(today.Month()), today.Day())

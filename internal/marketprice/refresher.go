@@ -192,7 +192,7 @@ func refreshPriceByTimeframe(c context.Context, timeframe string) ([]*RefreshPri
 }
 
 func getTickersByTimeframe(c context.Context, timeframe string) ([]*database.Ticker, error) {
-	query := `select t.symbol, t.class
+	query := `select distinct t.symbol, t.class
 					from ticker t join binding b on t.symbol = b.ticker_symbol
 					where b.timeframe = ?`
 

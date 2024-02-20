@@ -113,6 +113,7 @@ func handleHour4DataFetching(fetcher *CryptoDataFetcher, tickerSymbol string, le
 	return results, nil
 }
 
+// CoinAPI can't do concurrent calls with our tier, so can't have more than 1 crypto in W1
 func handleWeek1DataFetching(fetcher *CryptoDataFetcher, tickerSymbol string, length int) ([]*TickerData, error) {
 	tickerShorthand, ok := fetcher.tickerToShorthandMap[tickerSymbol]
 
