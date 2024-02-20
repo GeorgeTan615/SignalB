@@ -1,0 +1,22 @@
+name: Refresh Data and Evaluate Strategies
+
+on:
+  schedule:
+    - cron: '0 */4 * * *'   # Every 4 hours
+    
+env:
+  REFRESH_DATA_H4_URL: ${{ secrets.REFRESH_DATA_H4_URL }}
+  EVALUATE_STRATEGIES_H4_URL: ${{ secrets.EVALUATE_STRATEGIES_H4_URL }}
+  
+jobs:
+  refresh-evaluate-h4:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Refresh Data for H4 Timeframe
+        run: |
+          curl -X POST $REFRESH_DATA_H4_URL
+
+      - name: Evaluate Strategies for Tickers in H4 Timeframe
+        run: |
+          curl -X GET $EVALUATE_STRATEGIES_H4_URL
