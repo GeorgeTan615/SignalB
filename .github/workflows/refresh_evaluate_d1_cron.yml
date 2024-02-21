@@ -2,7 +2,7 @@ name: Refresh Data and Evaluate Strategies D1
 
 on:
   schedule:
-    - cron: '0 23 * * *'    # Every day at 2300 UTC
+    - cron: '30 22 * * *'    # Every day at 2230 UTC
     
 env:
   REFRESH_DATA_D1_URL: ${{ secrets.REFRESH_DATA_D1_URL }}
