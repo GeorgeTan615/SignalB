@@ -23,6 +23,13 @@ type EvaluationResult struct {
 	EvaluationMessage string
 }
 
+func NewEvaluationResult(isFulfilled bool, message string) *EvaluationResult {
+	return &EvaluationResult{
+		IsFulfilled:       isFulfilled,
+		EvaluationMessage: message,
+	}
+}
+
 type Strategy interface {
 	GetName() string
 	Evaluate(data []float64) *EvaluationResult
@@ -63,12 +70,13 @@ func (sm *StrategyManager) GetStrategyByName(strategyName string) (Strategy, err
 func init() {
 	// RSI
 	rsi20, rsi30, rsi70, rsi80 :=
-		NewRSIStrategy(20, VeryStrong, Buy),
-		NewRSIStrategy(30, Strong, Buy),
-		NewRSIStrategy(70, Strong, Sell),
-		NewRSIStrategy(80, VeryStrong, Sell)
+		NewRSI(20, VeryStrong, Buy),
+		NewRSI(30, Strong, Buy),
+		NewRSI(70, Strong, Sell),
+		NewRSI(80, VeryStrong, Sell)
 
-	// EMA
+	// SMA
+	sma200 := newSMA(200, VeryStrong)
 
 	// FIBONACCI
 
@@ -76,5 +84,6 @@ func init() {
 
 	strategyManager = NewStrategyManager(
 		rsi20, rsi30, rsi70, rsi80,
+		sma200,
 	)
 }

@@ -12,25 +12,25 @@ const (
 	length        = 14
 )
 
-type RSIStrategy struct {
+type RSI struct {
 	Level    float64
 	Strength StrategyStrength
 	Type     StrategyType
 }
 
-func NewRSIStrategy(level float64, strength StrategyStrength, typ StrategyType) *RSIStrategy {
-	return &RSIStrategy{
+func NewRSI(level float64, strength StrategyStrength, typ StrategyType) *RSI {
+	return &RSI{
 		Level:    level,
 		Strength: strength,
 		Type:     typ,
 	}
 }
 
-func (s *RSIStrategy) GetName() string {
-	return fmt.Sprintf("%s%0.f", "rsi", s.Level)
+func (s *RSI) GetName() string {
+	return fmt.Sprintf("rsi%0.f", s.Level)
 }
 
-func (s *RSIStrategy) Evaluate(data []float64) *EvaluationResult {
+func (s *RSI) Evaluate(data []float64) *EvaluationResult {
 	if len(data) != marketprice.RefreshAllDataLength {
 		log.Printf("Number of data should be %d", marketprice.RefreshAllDataLength)
 	}
@@ -39,25 +39,22 @@ func (s *RSIStrategy) Evaluate(data []float64) *EvaluationResult {
 
 	isSuccess := s.isRSIReachedLevel(rsi)
 
-	return &EvaluationResult{
-		IsFulfilled:       s.isRSIReachedLevel(rsi),
-		EvaluationMessage: s.getEvaluationMessage(rsi, isSuccess),
-	}
+	return NewEvaluationResult(s.isRSIReachedLevel(rsi), s.getEvaluationMessage(rsi, isSuccess))
 }
 
-func (s *RSIStrategy) getEvaluationMessage(rsi float64, isSuccess bool) string {
+func (s *RSI) getEvaluationMessage(rsi float64, isSuccess bool) string {
 	if !isSuccess {
-		return fmt.Sprintf("RSI(%0.2f) did not reach %0.f levels", rsi, s.Level)
+		return fmt.Sprintf("RSI of %0.2f not at %s levels", rsi, s.GetName())
 	}
 
 	if s.Type == Notify {
-		return fmt.Sprintf("RSI(%0.2f) reached %0.f levels", rsi, s.Level)
+		return fmt.Sprintf("RSI of %0.2f reached %s levels", rsi, s.GetName())
 	} else {
-		return fmt.Sprintf("%s %s, RSI(%0.2f) in %0.f zone", s.Strength, s.Type, rsi, s.Level)
+		return fmt.Sprintf("%s %s! RSI of %0.2f in %s zone", s.Strength, s.Type, rsi, s.GetName())
 	}
 }
 
-func (s *RSIStrategy) isRSIReachedLevel(rsi float64) bool {
+func (s *RSI) isRSIReachedLevel(rsi float64) bool {
 	upperZone := s.Level + zoneTolerance
 	lowerZone := s.Level - zoneTolerance
 
