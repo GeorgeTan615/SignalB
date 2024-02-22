@@ -62,6 +62,7 @@ func formatTickersStrategiesOutput(timeframe string, results map[string][]*Strat
 			resultContentBuilder.WriteString(
 				fmt.Sprintf("<code>%s %s</code>\n", resultLogo, strategyResp.EvaluationMessage))
 		}
+		resultContentBuilder.WriteString("\n")
 	}
 
 	resultContent := resultContentBuilder.String()
