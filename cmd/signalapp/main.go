@@ -1,6 +1,8 @@
 package main
 
 import (
+	"log"
+
 	"github.com/gin-gonic/gin"
 	"github.com/signalb/internal/database"
 	"github.com/signalb/internal/telegram"
@@ -13,5 +15,7 @@ func main() {
 	database.InitDB()
 	defer database.MySqlDB.Close()
 
-	router.Run(":8080")
+	if err := router.Run(":8080"); err != nil {
+		log.Println(err)
+	}
 }
