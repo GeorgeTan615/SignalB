@@ -137,7 +137,9 @@ func refreshData(c context.Context, ticker, timeframe string, data []*TickerData
 	_, err = tx.Exec(finalQuery)
 
 	if err != nil {
-		tx.Rollback()
+		if err := tx.Rollback(); err != nil {
+			return err
+		}
 		return err
 	}
 
