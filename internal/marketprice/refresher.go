@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/signalb/internal/database"
@@ -158,8 +159,10 @@ func refreshPriceByTimeframe(c context.Context, timeframe string) ([]*RefreshPri
 	var results []*RefreshPriceResp
 	chRes := make(chan *RefreshPriceResp, len(tickers))
 	chErr := make(chan error)
+	var wg sync.WaitGroup
 
 	for _, ticker := range tickers {
+		wg.Add(1)
 		go func(ticker *database.Ticker, timeframe string, chRes chan<- *RefreshPriceResp, chErr chan<- error) {
 			result, err := refreshPriceByTickerClassTimeframe(c, ticker.Symbol, ticker.Class, timeframe)
 

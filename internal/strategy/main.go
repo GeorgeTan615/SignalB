@@ -8,6 +8,8 @@ type StrategyStrength string
 type StrategyType string
 
 const (
+	Key StrategyStrength = "Key"
+
 	VeryWeak   StrategyStrength = "Very Weak"
 	Weak       StrategyStrength = "Weak"
 	Strong     StrategyStrength = "Strong"
@@ -69,9 +71,10 @@ func (sm *StrategyManager) GetStrategyByName(strategyName string) (Strategy, err
 
 func init() {
 	// RSI
-	rsi20, rsi30, rsi70, rsi80 :=
+	rsi20, rsi30, rsi40, rsi70, rsi80 :=
 		NewRSI(20, VeryStrong, Buy),
 		NewRSI(30, Strong, Buy),
+		NewRSI(40, Key, Buy),
 		NewRSI(70, Strong, Sell),
 		NewRSI(80, VeryStrong, Sell)
 
@@ -83,7 +86,7 @@ func init() {
 	// MOMENTUM, PRICE HUGE DIFFERENCE
 
 	strategyManager = NewStrategyManager(
-		rsi20, rsi30, rsi70, rsi80,
+		rsi20, rsi30, rsi40, rsi70, rsi80,
 		sma200,
 	)
 }
