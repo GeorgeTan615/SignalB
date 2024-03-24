@@ -121,23 +121,39 @@ func refreshData(c context.Context, ticker, timeframe string, data []*TickerData
 	return tx.Commit()
 }
 
-// TODO refactor
 func refreshPriceByTimeframe(c context.Context, timeframe string) ([]*RefreshPriceResp, error) {
-	// Get all ticker along with class
+	// get all ticker along with class
 	tickers, err := getTickersByTimeframe(c, timeframe)
 	if err != nil {
 		return nil, err
 	}
 
-	// For each ticker, refresh the data
-	var results []*RefreshPriceResp
-	chRes := make(chan *RefreshPriceResp, len(tickers))
-	chErr := make(chan error)
-	var wg sync.WaitGroup
+	var (
+		results []*RefreshPriceResp
+		chRes   = make(chan *RefreshPriceResp, len(tickers))
+		chErr   = make(chan error, len(tickers))
+	)
 
+	// collect results
+	go func() {
+		for res := range chRes {
+			results = append(results, res)
+		}
+	}()
+
+	// collect errors
+	go func() {
+		for newErr := range chErr {
+			err = newErr
+		}
+	}()
+
+	var wg sync.WaitGroup
 	for _, ticker := range tickers {
 		wg.Add(1)
-		go func(c context.Context, ticker *database.Ticker, timeframe string, chRes chan<- *RefreshPriceResp, chErr chan<- error) {
+		go func(ticker *database.Ticker, timeframe string, chRes chan<- *RefreshPriceResp, chErr chan<- error) {
+			defer wg.Done()
+
 			ctx, cancel := context.WithTimeout(c, 5*time.Second)
 			defer cancel()
 
@@ -150,26 +166,18 @@ func refreshPriceByTimeframe(c context.Context, timeframe string) ([]*RefreshPri
 				chRes <- result
 				log.Printf("Finished refreshing price for %s %s", ticker.Symbol, timeframe)
 			}
-		}(c, ticker, timeframe, chRes, chErr)
+		}(ticker, timeframe, chRes, chErr)
 	}
 
-	timeTicker := time.NewTicker(10 * time.Second)
-	defer timeTicker.Stop()
-	for {
-		select {
-		case res := <-chRes:
-			results = append(results, res)
-			if len(results) == len(tickers) {
-				return results, nil
-			}
+	wg.Wait()
+	close(chRes)
+	close(chErr)
 
-		case err := <-chErr:
-			return nil, err
-
-		case <-timeTicker.C:
-			return nil, errors.New("exceeded 1 minute for refreshing data")
-		}
+	if err != nil {
+		return nil, err
 	}
+
+	return results, err
 }
 
 func getTickersByTimeframe(c context.Context, timeframe string) ([]*database.Ticker, error) {

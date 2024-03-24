@@ -27,7 +27,7 @@ func EvaluateTickerStrategiesByTimeframeController(c *gin.Context) {
 		return
 	}
 
-	res, err := evaluateTickersStrategiesByTimeframe(tf)
+	res, err := evaluateTickersStrategiesByTimeframe(c.Request.Context(), tf)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError,
 			errors.NewErrorRespWithErr("Error evaluating strategies for each ticker in the given timeframe", err))

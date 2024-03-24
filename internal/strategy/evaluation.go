@@ -1,9 +1,11 @@
 package strategy
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/signalb/internal/database"
@@ -20,57 +22,74 @@ type tickerStrategiesResult struct {
 	strategiesResult []*Resp
 }
 
-// TODO refactor
-func evaluateTickersStrategiesByTimeframe(timeframe string) (map[string][]*Resp, error) {
-	chRes := make(chan tickerStrategiesResult)
-	chErr := make(chan error)
-	tickersStrategiesMap, err := getTickersAndStrategyByTimeframe(timeframe)
+func evaluateTickersStrategiesByTimeframe(c context.Context, timeframe string) (map[string][]*Resp, error) {
+	ctx, cancel := context.WithTimeout(c, 2*time.Second)
+	defer cancel()
+
+	tickersStrategiesMap, err := getTickersAndStrategyByTimeframe(ctx, timeframe)
 	if err != nil {
 		return nil, err
 	}
 
-	// chRes := make(chan tickerStrategiesResult)
-	// chErr := make(chan error)
+	var (
+		chRes  = make(chan tickerStrategiesResult, len(tickersStrategiesMap))
+		chErr  = make(chan error, len(tickersStrategiesMap))
+		result = make(map[string][]*Resp)
+		wg     sync.WaitGroup
+	)
+
+	// collect result
+	go func() {
+		for res := range chRes {
+			result[res.tickerSymbol] = res.strategiesResult
+		}
+	}()
+
+	// collect error
+	go func() {
+		for newErr := range chErr {
+			err = newErr
+		}
+	}()
 
 	for tickerSymbol, strategies := range tickersStrategiesMap {
-		go func(tickerSymbol, timeframe string, strategies []Strategy) {
-			data, err := getTickerDataByTimeframe(tickerSymbol, timeframe)
+		wg.Add(1)
+		go func(c context.Context, tickerSymbol, timeframe string, strategies []Strategy) {
+			defer wg.Done()
+
+			ctx, cancel := context.WithTimeout(c, 4*time.Second)
+			defer cancel()
+
+			data, err := getTickerDataByTimeframe(ctx, tickerSymbol, timeframe)
 			if err != nil {
 				chErr <- err
 				return
 			}
 
-			evaluateStrategiesForTicker(tickerSymbol, strategies, data, chRes, chErr)
-		}(tickerSymbol, timeframe, strategies)
-	}
-
-	result := make(map[string][]*Resp)
-	duration := 1 * time.Minute
-	timer := time.NewTicker(duration)
-
-	for {
-		select {
-		case res := <-chRes:
-			result[res.tickerSymbol] = res.strategiesResult
-			if len(tickersStrategiesMap) == len(result) {
-				return result, nil
+			err = evaluateStrategiesForTicker(ctx, tickerSymbol, strategies, data, chRes)
+			if err != nil {
+				chErr <- err
 			}
-
-		case err := <-chErr:
-			return nil, err
-
-		case <-timer.C:
-			return nil, fmt.Errorf("evaluate strategies took longer than %s", duration)
-		}
+		}(c, tickerSymbol, timeframe, strategies)
 	}
+
+	wg.Wait()
+	close(chRes)
+	close(chErr)
+
+	if err != nil {
+		return nil, err
+	}
+
+	return result, nil
 }
 
-func getTickersAndStrategyByTimeframe(timeframe string) (map[string][]Strategy, error) {
+func getTickersAndStrategyByTimeframe(c context.Context, timeframe string) (map[string][]Strategy, error) {
 	query := `select ticker_symbol, strategy
 					from binding
 					where timeframe = ?`
 
-	res, err := database.MySqlDB.Query(query, timeframe)
+	res, err := database.MySqlDB.QueryContext(c, query, timeframe)
 	if err != nil {
 		return nil, err
 	}
@@ -101,47 +120,63 @@ func getTickersAndStrategyByTimeframe(timeframe string) (map[string][]Strategy, 
 	return tickerToStrategiesMap, nil
 }
 
-// TODO refactor
 func evaluateStrategiesForTicker(
+	c context.Context,
 	tickerSymbol string,
 	strategies []Strategy,
 	data []float64,
 	chRes chan<- tickerStrategiesResult,
-	chErr chan<- error,
-) {
-	chStrategyResp := make(chan *Resp)
-	var strategyResps []*Resp
-
-	for _, strategy := range strategies {
-		go evaluateStrategy(data, strategy, chStrategyResp)
+) error {
+	select {
+	case <-c.Done():
+		return c.Err()
+	default:
 	}
 
-	timer := time.NewTicker(10 * time.Second)
-	for {
-		select {
-		case resp := <-chStrategyResp:
+	var (
+		chStrategyResp = make(chan *Resp)
+		strategyResps  []*Resp
+		wg             *sync.WaitGroup
+	)
+
+	go func() {
+		for resp := range chStrategyResp {
 			strategyResps = append(strategyResps, resp)
-			if len(strategyResps) == len(strategies) {
-				chRes <- tickerStrategiesResult{
-					tickerSymbol:     tickerSymbol,
-					strategiesResult: strategyResps,
-				}
-				return
-			}
-		case <-timer.C:
-			chErr <- errors.New("took too long to evaluate strategies")
-			return
 		}
+	}()
+
+	for _, strategy := range strategies {
+		wg.Add(1)
+		go evaluateStrategy(c, data, strategy, chStrategyResp, wg)
+	}
+
+	wg.Wait()
+	close(chStrategyResp)
+
+	if len(strategyResps) != len(strategies) {
+		return errors.New("something went wrong")
+	}
+
+	chRes <- tickerStrategiesResult{
+		tickerSymbol:     tickerSymbol,
+		strategiesResult: strategyResps,
+	}
+
+	select {
+	case <-c.Done():
+		return c.Err()
+	default:
+		return nil
 	}
 }
 
-func getTickerDataByTimeframe(tickerSymbol, timeframe string) ([]float64, error) {
+func getTickerDataByTimeframe(c context.Context, tickerSymbol, timeframe string) ([]float64, error) {
 	query := fmt.Sprintf(`select price
 							from price_%s
 							where ticker_symbol = ?
 							order by time`, strings.ToLower(timeframe))
 
-	rows, err := database.MySqlDB.Query(query, tickerSymbol)
+	rows, err := database.MySqlDB.QueryContext(c, query, tickerSymbol)
 	if err != nil {
 		return nil, err
 	}
@@ -163,10 +198,20 @@ func getTickerDataByTimeframe(tickerSymbol, timeframe string) ([]float64, error)
 }
 
 func evaluateStrategy(
+	c context.Context,
 	data []float64,
 	strategy Strategy,
 	chStrategyRes chan<- *Resp,
+	wg *sync.WaitGroup,
 ) {
+	defer wg.Done()
+
+	select {
+	case <-c.Done():
+		return
+	default:
+	}
+
 	result := strategy.Evaluate(data)
 
 	strategyRes := &Resp{
