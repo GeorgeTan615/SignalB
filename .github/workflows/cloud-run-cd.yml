@@ -58,7 +58,6 @@ jobs:
           --memory 512Mi \
           --platform managed \
           --allow-unauthenticated \
-          --set-env-vars DSN=${{ secrets.DSN }} \
           --set-env-vars RAPID_API_BASE_URL=${{ secrets.RAPID_API_BASE_URL }} \
           --set-env-vars RAPID_API_KEY=${{ secrets.RAPID_API_KEY }} \
           --set-env-vars RAPID_API_HOST=${{ secrets.RAPID_API_HOST }} \
@@ -68,6 +67,8 @@ jobs:
           --set-env-vars COINAPI_API_KEY=${{ secrets.COINAPI_API_KEY }} \
           --set-env-vars TELEGRAM_API_TOKEN=${{ secrets.TELEGRAM_API_TOKEN }} \
           --set-env-vars TELEGRAM_CHAT_ID=${{ secrets.TELEGRAM_CHAT_ID }} \
+          --set-env-vars TURSO_URL=${{ secrets.TURSO_URL }} \
+          --set-env-vars TURSO_TOKEN=${{ secrets.TURSO_TOKEN }} \
           --set-env-vars GOMAXPROCS=2 \
           --min-instances 0 \
           --max-instances 1 \
