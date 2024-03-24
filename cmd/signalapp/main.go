@@ -5,13 +5,19 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/signalb/internal/database"
+	"github.com/signalb/internal/marketprice"
+	"github.com/signalb/internal/strategy"
 	"github.com/signalb/internal/telegram"
 )
 
 func main() {
 	router := gin.Default()
+
+	// setup
 	InitRoutes(router)
 	telegram.InitBot()
+	strategy.InitStrategies()
+	marketprice.InitFetchers()
 	database.InitDB()
 	defer database.MySqlDB.Close()
 

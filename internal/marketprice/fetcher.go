@@ -30,7 +30,7 @@ func (fm *FetcherManager) getFetcherByTickerClass(class string) (TickerDataFetch
 	return fetcher, ok
 }
 
-func init() {
+func InitFetchers() {
 	err := godotenv.Load("../../.env")
 	if err != nil {
 		log.Println("Failed to load .env file", err)
@@ -43,33 +43,33 @@ func init() {
 }
 
 func getStockDataFetcher() TickerDataFetcher {
-	rapidApiBaseUrl := os.Getenv("RAPID_API_BASE_URL")
-	rapidApiKey := os.Getenv("RAPID_API_KEY")
-	rapidApiHost := os.Getenv("RAPID_API_HOST")
+	rapidAPIBaseURL := os.Getenv("RAPID_API_BASE_URL")
+	rapidAPIKey := os.Getenv("RAPID_API_KEY")
+	rapidAPIHost := os.Getenv("RAPID_API_HOST")
 
-	credentials := &RapidApiCredentials{
-		baseUrl: rapidApiBaseUrl,
-		key:     rapidApiKey,
-		host:    rapidApiHost,
+	credentials := &RapidAPICredentials{
+		baseURL: rapidAPIBaseURL,
+		key:     rapidAPIKey,
+		host:    rapidAPIHost,
 	}
 
 	return NewStockDataFetcher(credentials)
 }
 
 func getCryptoDataFetcher() TickerDataFetcher {
-	tiBaseUrl := os.Getenv("TI_BASE_URL")
-	tiApiKey := os.Getenv("TI_API_KEY")
-	coinApiBaseUrl := os.Getenv("COINAPI_BASE_URL")
-	coinApiKey := os.Getenv("COINAPI_API_KEY")
+	tiBaseURL := os.Getenv("TI_BASE_URL")
+	tiAPIKey := os.Getenv("TI_API_KEY")
+	coinAPIBaseURL := os.Getenv("COINAPI_BASE_URL")
+	coinAPIKey := os.Getenv("COINAPI_API_KEY")
 
 	tiCredentials := &TokenInsightCredentials{
-		baseUrl: tiBaseUrl,
-		key:     tiApiKey,
+		baseURL: tiBaseURL,
+		key:     tiAPIKey,
 	}
 
-	coinApiCredentials := &CoinApiCredentials{
-		baseUrl: coinApiBaseUrl,
-		key:     coinApiKey,
+	coinAPICredentials := &CoinAPICredentials{
+		baseURL: coinAPIBaseURL,
+		key:     coinAPIKey,
 	}
 
 	tickerToShorthandMap := map[string]string{
@@ -77,5 +77,5 @@ func getCryptoDataFetcher() TickerDataFetcher {
 		"ETHEREUM": "ETH",
 	}
 
-	return NewCryptoDataFetcher(tiCredentials, coinApiCredentials, tickerToShorthandMap)
+	return NewCryptoDataFetcher(tiCredentials, coinAPICredentials, tickerToShorthandMap)
 }

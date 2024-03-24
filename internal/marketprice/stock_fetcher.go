@@ -1,6 +1,7 @@
 package marketprice
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -12,21 +13,21 @@ import (
 )
 
 const (
-	rapidApiIntradayMaximumLength = 250 // Intraday max is 1000
+	rapidAPIIntradayMaximumLength = 250 // Intraday max is 1000
 )
 
-type RapidApiCredentials struct {
-	baseUrl string
+type RapidAPICredentials struct {
+	baseURL string
 	key     string
 	host    string
 }
 
 type StockDataFetcher struct {
-	credentials      *RapidApiCredentials
+	credentials      *RapidAPICredentials
 	timeframeMapping map[string]string
 }
 
-func NewStockDataFetcher(credentials *RapidApiCredentials) *StockDataFetcher {
+func NewStockDataFetcher(credentials *RapidAPICredentials) *StockDataFetcher {
 	timeframeMapping := map[string]string{
 		timeframe.Day1:  "daily",
 		timeframe.Week1: "weekly",
@@ -43,7 +44,11 @@ func (stockDF *StockDataFetcher) FetchClass() string {
 	return ticker.StockClass
 }
 
-func (stockDF *StockDataFetcher) Fetch(timeframe, tickerSymbol string, length int) ([]*TickerData, error) {
+func (stockDF *StockDataFetcher) Fetch(
+	ctx context.Context,
+	timeframe, tickerSymbol string,
+	length int,
+) ([]*TickerData, error) {
 	if length > RefreshAllDataLength {
 		return nil, fmt.Errorf("maximum length is %d", RefreshAllDataLength)
 	}
@@ -51,7 +56,7 @@ func (stockDF *StockDataFetcher) Fetch(timeframe, tickerSymbol string, length in
 	var (
 		results       []*TickerData
 		err           error
-		fetchStrategy func(credentials *RapidApiCredentials, timeframeVal, tickerSymbol string, length int) ([]*TickerData, error)
+		fetchStrategy func(ctx context.Context, credentials *RapidAPICredentials, timeframeVal, tickerSymbol string, length int) ([]*TickerData, error)
 	)
 
 	timeframeVal := stockDF.timeframeMapping[timeframe]
@@ -61,8 +66,7 @@ func (stockDF *StockDataFetcher) Fetch(timeframe, tickerSymbol string, length in
 		fetchStrategy = handleIntradayDataFetching
 	}
 
-	results, err = fetchStrategy(stockDF.credentials, timeframeVal, tickerSymbol, length)
-
+	results, err = fetchStrategy(ctx, stockDF.credentials, timeframeVal, tickerSymbol, length)
 	if err != nil {
 		return nil, err
 	}
@@ -70,22 +74,25 @@ func (stockDF *StockDataFetcher) Fetch(timeframe, tickerSymbol string, length in
 	return results, nil
 }
 
-func handleIntradayDataFetching(credentials *RapidApiCredentials, timeframeVal, tickerSymbol string, length int) ([]*TickerData, error) {
+func handleIntradayDataFetching(
+	ctx context.Context,
+	credentials *RapidAPICredentials,
+	timeframeVal, tickerSymbol string,
+	length int,
+) ([]*TickerData, error) {
 	location, err := time.LoadLocation("America/New_York")
-
 	if err != nil {
 		return nil, err
 	}
 
-	if length > rapidApiIntradayMaximumLength {
-		length = rapidApiIntradayMaximumLength
+	if length > rapidAPIIntradayMaximumLength {
+		length = rapidAPIIntradayMaximumLength
 	}
 
 	adjustedLength := 4 * length
-	url := fmt.Sprintf("%s/%s?symbol=%s&interval=60min&maxreturn=%d", credentials.baseUrl, timeframeVal, tickerSymbol, adjustedLength)
+	url := fmt.Sprintf("%s/%s?symbol=%s&interval=60min&maxreturn=%d", credentials.baseURL, timeframeVal, tickerSymbol, adjustedLength)
 
-	resp, err := makeRapidAPIHistoricalDataCall(url, credentials.key, credentials.host)
-
+	resp, err := makeRapidAPIHistoricalDataCall(ctx, url, credentials.key, credentials.host)
 	if err != nil {
 		return nil, err
 	}
@@ -94,7 +101,6 @@ func handleIntradayDataFetching(credentials *RapidApiCredentials, timeframeVal, 
 	for i := len(resp.Results) - 1; len(results) < length; i -= 4 {
 		currRes := resp.Results[i]
 		parsedTime, err := getDateStrToTime("2006-01-02 15:00", location, currRes.Date)
-
 		if err != nil {
 			return nil, err
 		}
@@ -105,9 +111,13 @@ func handleIntradayDataFetching(credentials *RapidApiCredentials, timeframeVal, 
 	return results, nil
 }
 
-func handleNonIntradayDataFetching(credentials *RapidApiCredentials, timeframeVal, tickerSymbol string, length int) ([]*TickerData, error) {
+func handleNonIntradayDataFetching(
+	ctx context.Context,
+	credentials *RapidAPICredentials,
+	timeframeVal, tickerSymbol string,
+	length int,
+) ([]*TickerData, error) {
 	location, err := time.LoadLocation("America/New_York")
-
 	if err != nil {
 		return nil, err
 	}
@@ -125,10 +135,9 @@ func handleNonIntradayDataFetching(credentials *RapidApiCredentials, timeframeVa
 	dateEnd := fmt.Sprintf("%v-%v-%v", today.Year(), int(today.Month()), today.Day())
 	dateStart := fmt.Sprintf("%v-%v-%v", yesterday.Year(), int(yesterday.Month()), yesterday.Day())
 
-	url := fmt.Sprintf("%s/%s?symbol=%s&dateStart=%s&dateEnd=%s", credentials.baseUrl, timeframeVal, tickerSymbol, dateStart, dateEnd)
+	url := fmt.Sprintf("%s/%s?symbol=%s&dateStart=%s&dateEnd=%s", credentials.baseURL, timeframeVal, tickerSymbol, dateStart, dateEnd)
 
-	resp, err := makeRapidAPIHistoricalDataCall(url, credentials.key, credentials.host)
-
+	resp, err := makeRapidAPIHistoricalDataCall(ctx, url, credentials.key, credentials.host)
 	if err != nil {
 		return nil, err
 	}
@@ -139,7 +148,6 @@ func handleNonIntradayDataFetching(credentials *RapidApiCredentials, timeframeVa
 	for i := idx; len(results) < length; i -= jumpInterval {
 		currRes := resp.Results[i]
 		parsedTime, err := getDateStrToTime("2006-01-02", location, currRes.Date)
-
 		if err != nil {
 			return nil, err
 		}
@@ -150,9 +158,8 @@ func handleNonIntradayDataFetching(credentials *RapidApiCredentials, timeframeVa
 	return results, nil
 }
 
-func makeRapidAPIHistoricalDataCall(url, key, host string) (*RapidApiDataResp, error) {
-	req, err := http.NewRequest("GET", url, nil)
-
+func makeRapidAPIHistoricalDataCall(ctx context.Context, url, key, host string) (*RapidAPIDataResp, error) {
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -161,19 +168,17 @@ func makeRapidAPIHistoricalDataCall(url, key, host string) (*RapidApiDataResp, e
 	req.Header.Add("X-RapidAPI-Host", host)
 
 	res, err := http.DefaultClient.Do(req)
-
 	if err != nil {
 		return nil, err
 	}
 
 	defer res.Body.Close()
 	body, err := io.ReadAll(res.Body)
-
 	if err != nil {
 		return nil, err
 	}
 
-	var resp RapidApiDataResp
+	var resp RapidAPIDataResp
 
 	if err := json.Unmarshal(body, &resp); err != nil {
 		return nil, err
@@ -197,11 +202,14 @@ func getStartIndexAndJumpInterval(timeframeVal string, results []Result) (int, i
 	secondLastResult := results[len(results)-2]
 
 	// For weekly data, we need to see which data to start jumping from
+	var startIdx int
 	if secondLastResult.Close == lastResult.Close {
-		return len(results) - 2, weeklyJumpInterval
+		startIdx = len(results) - 2
 	} else {
-		return len(results) - 1, weeklyJumpInterval
+		startIdx = len(results) - 1
 	}
+
+	return startIdx, weeklyJumpInterval
 }
 
 func getDateStrToTime(layout string, loc *time.Location, dateStr string) (time.Time, error) {

@@ -19,7 +19,6 @@ const (
 
 func refreshPriceByTickerTimeframe(c context.Context, ticker, timeframe string) (*RefreshPriceResp, error) {
 	class, err := getTickerClass(c, ticker)
-
 	if err != nil {
 		return nil, err
 	}
@@ -27,15 +26,10 @@ func refreshPriceByTickerTimeframe(c context.Context, ticker, timeframe string) 
 	return refreshPriceByTickerClassTimeframe(c, ticker, class, timeframe)
 }
 
-func refreshPriceByTickerClassTimeframe(c context.Context, ticker, class, timeframe string) (*RefreshPriceResp, error) {
-	// Get optimal number of data that needs to be refreshed
-	// var length int
-	// if isDataOutdated(c, ticker, timeframe) {
-	// 	length = RefreshAllDataLength
-	// } else {
-	// 	length = UpdateLatestDataLength
-	// }
-
+func refreshPriceByTickerClassTimeframe(
+	ctx context.Context,
+	ticker, class, timeframe string,
+) (*RefreshPriceResp, error) {
 	// Just get all data since its inexpensive, dont have to deal with stale data
 	length := RefreshAllDataLength
 
@@ -46,14 +40,12 @@ func refreshPriceByTickerClassTimeframe(c context.Context, ticker, class, timefr
 		return nil, errors.New("can't get data fetcher")
 	}
 
-	res, err := fetcher.Fetch(timeframe, ticker, length)
-
+	res, err := fetcher.Fetch(ctx, timeframe, ticker, length)
 	if err != nil {
 		return nil, err
 	}
 
-	err = refreshData(c, ticker, timeframe, res)
-
+	err = refreshData(ctx, ticker, timeframe, res)
 	if err != nil {
 		return nil, err
 	}
@@ -66,21 +58,6 @@ func refreshPriceByTickerClassTimeframe(c context.Context, ticker, class, timefr
 	}, nil
 }
 
-// func isDataOutdated(c context.Context, tickerSymbol, timeframe string) bool {
-// 	table := fmt.Sprintf("price_%s", strings.ToLower(timeframe))
-// 	query := fmt.Sprintf(`select count(ticker_symbol)
-// 					from price_%s
-// 					where ticker_symbol = ?`, table)
-
-// 	ctx, cancel := context.WithTimeout(c, 2*time.Second)
-// 	defer cancel()
-
-// 	var count int
-// 	err := database.MySqlDB.QueryRowContext(ctx, query, tickerSymbol).Scan(&count)
-
-// 	return err != nil || count != RefreshAllDataLength
-// }
-
 func getTickerClass(c context.Context, ticker string) (string, error) {
 	query := `select class 
 					from ticker
@@ -89,30 +66,29 @@ func getTickerClass(c context.Context, ticker string) (string, error) {
 	defer cancel()
 
 	var class string
-	err := database.MySqlDB.QueryRowContext(ctx, query, ticker).Scan(&class)
 
+	err := database.MySqlDB.QueryRowContext(ctx, query, ticker).Scan(&class)
 	if err != nil {
 		return "", err
 	}
-	return class, nil
 
+	return class, nil
 }
 
 func refreshData(c context.Context, ticker, timeframe string, data []*TickerData) error {
 	// Based on how much data we adding, we will remove x amount of data
 	count := len(data)
-	table := fmt.Sprintf("price_%s", strings.ToLower(timeframe))
+	table := "price_" + strings.ToLower(timeframe)
 	delQuery := fmt.Sprintf(`delete 
-					from %s
-					where ticker_symbol = ?
-					order by time 
-					limit ?`, table)
+						from %s
+						where ticker_symbol = ?
+						order by time 
+						limit ?`, table)
 
 	delCtx, cancel := context.WithTimeout(c, 10*time.Second)
 	defer cancel()
 
 	_, err := database.MySqlDB.ExecContext(delCtx, delQuery, ticker, count)
-
 	if err != nil {
 		return err
 	}
@@ -130,15 +106,13 @@ func refreshData(c context.Context, ticker, timeframe string, data []*TickerData
 
 	finalQuery := builder.String()
 	tx, err := database.MySqlDB.Begin()
-
 	if err != nil {
 		return err
 	}
 
 	_, err = tx.Exec(finalQuery)
-
 	if err != nil {
-		if err := tx.Rollback(); err != nil {
+		if err = tx.Rollback(); err != nil {
 			return err
 		}
 		return err
@@ -147,10 +121,10 @@ func refreshData(c context.Context, ticker, timeframe string, data []*TickerData
 	return tx.Commit()
 }
 
+// TODO refactor
 func refreshPriceByTimeframe(c context.Context, timeframe string) ([]*RefreshPriceResp, error) {
 	// Get all ticker along with class
 	tickers, err := getTickersByTimeframe(c, timeframe)
-
 	if err != nil {
 		return nil, err
 	}
@@ -163,8 +137,11 @@ func refreshPriceByTimeframe(c context.Context, timeframe string) ([]*RefreshPri
 
 	for _, ticker := range tickers {
 		wg.Add(1)
-		go func(ticker *database.Ticker, timeframe string, chRes chan<- *RefreshPriceResp, chErr chan<- error) {
-			result, err := refreshPriceByTickerClassTimeframe(c, ticker.Symbol, ticker.Class, timeframe)
+		go func(c context.Context, ticker *database.Ticker, timeframe string, chRes chan<- *RefreshPriceResp, chErr chan<- error) {
+			ctx, cancel := context.WithTimeout(c, 5*time.Second)
+			defer cancel()
+
+			result, err := refreshPriceByTickerClassTimeframe(ctx, ticker.Symbol, ticker.Class, timeframe)
 
 			if err != nil {
 				chErr <- err
@@ -173,8 +150,7 @@ func refreshPriceByTimeframe(c context.Context, timeframe string) ([]*RefreshPri
 				chRes <- result
 				log.Printf("Finished refreshing price for %s %s", ticker.Symbol, timeframe)
 			}
-
-		}(ticker, timeframe, chRes, chErr)
+		}(c, ticker, timeframe, chRes, chErr)
 	}
 
 	timeTicker := time.NewTicker(10 * time.Second)
@@ -205,7 +181,6 @@ func getTickersByTimeframe(c context.Context, timeframe string) ([]*database.Tic
 	defer cancel()
 
 	res, err := database.MySqlDB.QueryContext(ctx, query, timeframe)
-
 	if err != nil {
 		return nil, err
 	}
@@ -217,7 +192,6 @@ func getTickersByTimeframe(c context.Context, timeframe string) ([]*database.Tic
 		var ticker database.Ticker
 
 		err = res.Scan(&ticker.Symbol, &ticker.Class)
-
 		if err != nil {
 			return nil, err
 		}

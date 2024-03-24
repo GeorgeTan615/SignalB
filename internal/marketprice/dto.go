@@ -16,7 +16,7 @@ type Result struct {
 	AdjClose float64
 }
 
-type RapidApiDataResp struct {
+type RapidAPIDataResp struct {
 	Metadata MetadataResp
 	Results  []Result
 }
@@ -36,7 +36,7 @@ type TokenInsightDataResp struct {
 	Data TIDataResp `json:"data"`
 }
 
-type CoinApiDataResp struct {
+type CoinAPIDataResp struct {
 	TimePeriodEnd string  `json:"time_period_end"`
 	PriceClose    float64 `json:"price_close"`
 }

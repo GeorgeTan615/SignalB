@@ -8,10 +8,10 @@ const (
 
 type SMA struct {
 	Length   int
-	Strength StrategyStrength
+	Strength Strength
 }
 
-func newSMA(length int, strength StrategyStrength) *SMA {
+func newSMA(length int, strength Strength) *SMA {
 	return &SMA{
 		Length:   length,
 		Strength: strength,

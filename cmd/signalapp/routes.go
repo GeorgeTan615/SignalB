@@ -30,7 +30,7 @@ func InitRoutes(router *gin.Engine) {
 
 	data := router.Group("/api/marketprice")
 	{
-		data.POST("/:timeframe/:ticker", marketprice.RefreshMarketpriceByTickerTimeframeController)
+		data.POST("/:timeframe/:ticker", marketprice.RefreshPriceByTickerTimeframeController)
 		data.POST("/:timeframe", marketprice.RefreshMarketpriceByTimeframeController)
 		data.GET("/:timeframe/:ticker", marketprice.GetMarketpriceDataByTickerTimeframeController)
 	}
@@ -40,5 +40,4 @@ func InitRoutes(router *gin.Engine) {
 		strategies.GET("", strategy.GetStrategiesController)
 		strategies.GET("/:timeframe/evaluate", strategy.EvaluateTickerStrategiesByTimeframeController)
 	}
-
 }

@@ -4,20 +4,22 @@ import (
 	"fmt"
 )
 
-type StrategyStrength string
-type StrategyType string
+type (
+	Strength string
+	Type     string
+)
 
 const (
-	Key StrategyStrength = "Key"
+	Key Strength = "Key"
 
-	VeryWeak   StrategyStrength = "Very Weak"
-	Weak       StrategyStrength = "Weak"
-	Strong     StrategyStrength = "Strong"
-	VeryStrong StrategyStrength = "Very Strong"
+	VeryWeak   Strength = "Very Weak"
+	Weak       Strength = "Weak"
+	Strong     Strength = "Strong"
+	VeryStrong Strength = "Very Strong"
 
-	Sell   StrategyType = "Sell"
-	Buy    StrategyType = "Buy"
-	Notify StrategyType = "Notify"
+	Sell   Type = "Sell"
+	Buy    Type = "Buy"
+	Notify Type = "Notify"
 )
 
 type EvaluationResult struct {
@@ -37,15 +39,17 @@ type Strategy interface {
 	Evaluate(data []float64) *EvaluationResult
 }
 
-var AllowedStrategies []string
-var strategyManager *StrategyManager
+var (
+	AllowedStrategies []string
+	strategyManager   *Manager
+)
 
-type StrategyManager struct {
+type Manager struct {
 	Strategies        []Strategy
 	NameToStrategyMap map[string]Strategy
 }
 
-func NewStrategyManager(strategies ...Strategy) *StrategyManager {
+func NewStrategyManager(strategies ...Strategy) *Manager {
 	nameToStrategyMap := make(map[string]Strategy, len(strategies))
 
 	for _, strategy := range strategies {
@@ -53,13 +57,13 @@ func NewStrategyManager(strategies ...Strategy) *StrategyManager {
 		AllowedStrategies = append(AllowedStrategies, strategy.GetName())
 	}
 
-	return &StrategyManager{
+	return &Manager{
 		Strategies:        strategies,
 		NameToStrategyMap: nameToStrategyMap,
 	}
 }
 
-func (sm *StrategyManager) GetStrategyByName(strategyName string) (Strategy, error) {
+func (sm *Manager) GetStrategyByName(strategyName string) (Strategy, error) {
 	strategy, ok := sm.NameToStrategyMap[strategyName]
 
 	if !ok {
@@ -69,10 +73,9 @@ func (sm *StrategyManager) GetStrategyByName(strategyName string) (Strategy, err
 	return strategy, nil
 }
 
-func init() {
+func InitStrategies() {
 	// RSI
-	rsi20, rsi30, rsi40, rsi70, rsi80 :=
-		NewRSI(20, VeryStrong, Buy),
+	rsi20, rsi30, rsi40, rsi70, rsi80 := NewRSI(20, VeryStrong, Buy),
 		NewRSI(30, Strong, Buy),
 		NewRSI(40, Key, Buy),
 		NewRSI(70, Strong, Sell),

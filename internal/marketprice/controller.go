@@ -10,18 +10,18 @@ import (
 	"github.com/signalb/utils"
 )
 
-func RefreshMarketpriceByTickerTimeframeController(c *gin.Context) {
+func RefreshPriceByTickerTimeframeController(c *gin.Context) {
 	tf := c.Param("timeframe")
 	ticker := c.Param("ticker")
 	reqCtx := c.Request.Context()
 
 	if !utils.SliceContains[string](timeframe.AllowedTimeframes[:], tf) {
-		c.JSON(http.StatusBadRequest, errors.NewErrorResp(fmt.Sprintf("Timeframe must be of %v", timeframe.AllowedTimeframes)))
+		c.JSON(http.StatusBadRequest,
+			errors.NewErrorResp(fmt.Sprintf("Timeframe must be of %v", timeframe.AllowedTimeframes)))
 		return
 	}
 
 	res, err := refreshPriceByTickerTimeframe(reqCtx, ticker, tf)
-
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, errors.NewErrorRespWithErr("Error refreshing data", err))
 		return
@@ -34,16 +34,17 @@ func RefreshMarketpriceByTimeframeController(c *gin.Context) {
 	tf := c.Param("timeframe")
 
 	if !utils.SliceContains[string](timeframe.AllowedTimeframes[:], tf) {
-		c.JSON(http.StatusBadRequest, errors.NewErrorResp(fmt.Sprintf("Timeframe must be of %v", timeframe.AllowedTimeframes)))
+		c.JSON(http.StatusBadRequest,
+			errors.NewErrorResp(fmt.Sprintf("Timeframe must be of %v", timeframe.AllowedTimeframes)))
 		return
 	}
 
 	reqCtx := c.Request.Context()
 
 	res, err := refreshPriceByTimeframe(reqCtx, tf)
-
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, errors.NewErrorRespWithErr("Error refreshing data by timeframe", err))
+		c.JSON(http.StatusInternalServerError,
+			errors.NewErrorRespWithErr("Error refreshing data by timeframe", err))
 		return
 	}
 
@@ -56,23 +57,24 @@ func GetMarketpriceDataByTickerTimeframeController(c *gin.Context) {
 	ctx := c.Request.Context()
 
 	class, err := getTickerClass(ctx, ticker)
-
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, errors.NewErrorRespWithErr("Error getting ticker class", err))
+		c.JSON(http.StatusInternalServerError,
+			errors.NewErrorRespWithErr("Error getting ticker class", err))
 		return
 	}
 
 	fetcher, ok := fetcherManager.getFetcherByTickerClass(class)
 
 	if !ok {
-		c.JSON(http.StatusInternalServerError, errors.NewErrorResp("Error getting data fetcher"))
+		c.JSON(http.StatusInternalServerError,
+			errors.NewErrorResp("Error getting data fetcher"))
 		return
 	}
 
-	res, err := fetcher.Fetch(tf, ticker, RefreshAllDataLength)
-
+	res, err := fetcher.Fetch(ctx, tf, ticker, RefreshAllDataLength)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, errors.NewErrorRespWithErr("Error fetching data", err))
+		c.JSON(http.StatusInternalServerError,
+			errors.NewErrorRespWithErr("Error fetching data", err))
 		return
 	}
 

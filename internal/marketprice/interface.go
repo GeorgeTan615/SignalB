@@ -1,6 +1,9 @@
 package marketprice
 
-import "time"
+import (
+	"context"
+	"time"
+)
 
 type TickerData struct {
 	Time  time.Time
@@ -15,6 +18,6 @@ func NewTickerData(time time.Time, price float64) *TickerData {
 }
 
 type TickerDataFetcher interface {
-	Fetch(timeframe, ticker string, length int) ([]*TickerData, error)
+	Fetch(ctx context.Context, timeframe, ticker string, length int) ([]*TickerData, error)
 	FetchClass() string
 }

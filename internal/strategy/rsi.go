@@ -14,11 +14,11 @@ const (
 
 type RSI struct {
 	Level    float64
-	Strength StrategyStrength
-	Type     StrategyType
+	Strength Strength
+	Type     Type
 }
 
-func NewRSI(level float64, strength StrategyStrength, typ StrategyType) *RSI {
+func NewRSI(level float64, strength Strength, typ Type) *RSI {
 	return &RSI{
 		Level:    level,
 		Strength: strength,
@@ -47,24 +47,34 @@ func (s *RSI) getEvaluationMessage(rsi float64, isSuccess bool) string {
 		return fmt.Sprintf("RSI of %0.2f not at %s levels", rsi, s.GetName())
 	}
 
+	var msg string
 	if s.Type == Notify {
-		return fmt.Sprintf("RSI of %0.2f reached %s levels", rsi, s.GetName())
+		msg = fmt.Sprintf("RSI of %0.2f reached %s levels", rsi, s.GetName())
 	} else {
-		return fmt.Sprintf("%s %s! RSI of %0.2f in %s zone", s.Strength, s.Type, rsi, s.GetName())
+		msg = fmt.Sprintf("%s %s! RSI of %0.2f in %s zone", s.Strength, s.Type, rsi, s.GetName())
 	}
+
+	return msg
 }
 
 func (s *RSI) isRSIReachedLevel(rsi float64) bool {
+	var res bool
+
 	upperZone := s.Level + zoneTolerance
 	lowerZone := s.Level - zoneTolerance
 
-	if s.Type == Sell {
-		return rsi >= lowerZone
-	} else if s.Type == Buy {
-		return rsi <= upperZone
-	} else {
-		return upperZone >= rsi && rsi >= lowerZone
+	switch s.Type {
+	case Sell:
+		res = rsi >= lowerZone
+	case Buy:
+		res = rsi <= upperZone
+	case Notify:
+		fallthrough
+	default:
+		res = upperZone >= rsi && rsi >= lowerZone
 	}
+
+	return res
 }
 
 // Reference https://blog.quantinsti.com/rsi-indicator/

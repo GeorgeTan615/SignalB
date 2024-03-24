@@ -42,7 +42,6 @@ func insertTicker(c context.Context, symbol, class string) error {
 	query := `insert into ticker (symbol, class) values (?,?)`
 
 	_, err := database.MySqlDB.ExecContext(ctx, query, symbol, class)
-
 	if err != nil {
 		return err
 	}
@@ -52,7 +51,6 @@ func insertTicker(c context.Context, symbol, class string) error {
 
 func GetTickers(c *gin.Context) {
 	results, err := getTickers(c.Request.Context())
-
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, errors.NewErrorRespWithErr(errors.DatabaseQueryError, err))
 	}
@@ -69,7 +67,6 @@ func getTickers(c context.Context) ([]database.Ticker, error) {
 	query := `select symbol, class from ticker`
 
 	res, err := database.MySqlDB.QueryContext(ctx, query)
-
 	if err != nil {
 		return nil, err
 	}
@@ -80,8 +77,7 @@ func getTickers(c context.Context) ([]database.Ticker, error) {
 	for res.Next() {
 		var ticker database.Ticker
 
-		err := res.Scan(&ticker.Symbol, &ticker.Class)
-
+		err = res.Scan(&ticker.Symbol, &ticker.Class)
 		if err != nil {
 			return nil, err
 		}

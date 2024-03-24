@@ -9,36 +9,33 @@ import (
 	"github.com/joho/godotenv"
 )
 
-var Bot *TelegramBot
+var Bot *BotClient
 
-type TelegramBot struct {
-	DefaultChatId int64
+type BotClient struct {
+	DefaultChatID int64
 	BotAPI        *tgbotapi.BotAPI
 }
 
 func InitBot() {
 	err := godotenv.Load("../../.env")
-
 	if err != nil {
 		log.Println("Failed to load .env file", err)
 	}
 
 	bot, err := tgbotapi.NewBotAPI(os.Getenv("TELEGRAM_API_TOKEN"))
-
 	if err != nil {
 		log.Panic(err)
 	}
 
 	bot.Debug = true
-	chatId, err := strconv.ParseInt(os.Getenv("TELEGRAM_CHAT_ID"), 10, 64)
-
+	chatID, err := strconv.ParseInt(os.Getenv("TELEGRAM_CHAT_ID"), 10, 64)
 	if err != nil {
 		log.Println("error parsing chat id", err)
 	}
 
-	Bot = &TelegramBot{
+	Bot = &BotClient{
 		BotAPI:        bot,
-		DefaultChatId: chatId,
+		DefaultChatID: chatID,
 	}
 
 	log.Printf("Authorized on account %s", bot.Self.UserName)
@@ -46,7 +43,7 @@ func InitBot() {
 	go Bot.listenForUpdates()
 }
 
-func (b *TelegramBot) listenForUpdates() {
+func (b *BotClient) listenForUpdates() {
 	u := tgbotapi.NewUpdate(0) // Set offset to 0
 	u.Timeout = 60
 	updates := b.BotAPI.GetUpdatesChan(u)
@@ -78,14 +75,14 @@ func (b *TelegramBot) listenForUpdates() {
 	}
 }
 
-func (b *TelegramBot) SendMessageByHTML(chatId int64, message string) error {
+func (b *BotClient) SendMessageByHTML(chatID int64, message string) error {
 	if message == "" {
 		return nil
 	}
 
 	msg := tgbotapi.MessageConfig{
 		BaseChat: tgbotapi.BaseChat{
-			ChatID:              chatId,
+			ChatID:              chatID,
 			ReplyToMessageID:    0,
 			DisableNotification: false,
 		},

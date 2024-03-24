@@ -1,6 +1,7 @@
 package marketprice
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -14,28 +15,29 @@ import (
 )
 
 type TokenInsightCredentials struct {
-	baseUrl string
+	baseURL string
 	key     string
 }
 
-type CoinApiCredentials struct {
-	baseUrl string
+type CoinAPICredentials struct {
+	baseURL string
 	key     string
 }
 
 type CryptoDataFetcher struct {
 	tiCredentials        *TokenInsightCredentials
-	coinApiCredentials   *CoinApiCredentials
+	coinAPICredentials   *CoinAPICredentials
 	tickerToShorthandMap map[string]string
 }
 
 func NewCryptoDataFetcher(
 	tiCredentials *TokenInsightCredentials,
-	coinApiCredentials *CoinApiCredentials,
-	tickerToShorthandMap map[string]string) *CryptoDataFetcher {
+	coinAPICredentials *CoinAPICredentials,
+	tickerToShorthandMap map[string]string,
+) *CryptoDataFetcher {
 	return &CryptoDataFetcher{
 		tiCredentials:        tiCredentials,
-		coinApiCredentials:   coinApiCredentials,
+		coinAPICredentials:   coinAPICredentials,
 		tickerToShorthandMap: tickerToShorthandMap,
 	}
 }
@@ -44,13 +46,18 @@ func (cryptoDF *CryptoDataFetcher) FetchClass() string {
 	return ticker.CryptoClass
 }
 
-func (cryptoDF *CryptoDataFetcher) Fetch(timeframe, tickerSymbol string, length int) ([]*TickerData, error) {
+func (cryptoDF *CryptoDataFetcher) Fetch(
+	ctx context.Context,
+	timeframe,
+	tickerSymbol string,
+	length int,
+) ([]*TickerData, error) {
 	if length > RefreshAllDataLength {
 		return nil, fmt.Errorf("maximum length is %d", RefreshAllDataLength)
 	}
 
 	var (
-		fetchStrategy func(fetcher *CryptoDataFetcher, tickerSymbol string, length int) ([]*TickerData, error)
+		fetchStrategy func(context.Context, *CryptoDataFetcher, string, int) ([]*TickerData, error)
 		err           error
 	)
 
@@ -69,15 +76,19 @@ func (cryptoDF *CryptoDataFetcher) Fetch(timeframe, tickerSymbol string, length 
 		return nil, err
 	}
 
-	return fetchStrategy(cryptoDF, tickerSymbol, length)
+	return fetchStrategy(ctx, cryptoDF, tickerSymbol, length)
 }
 
-func handleDay1DataFetching(fetcher *CryptoDataFetcher, tickerSymbol string, length int) ([]*TickerData, error) {
+func handleDay1DataFetching(
+	ctx context.Context,
+	fetcher *CryptoDataFetcher,
+	tickerSymbol string,
+	length int,
+) ([]*TickerData, error) {
 	interval := "day"
-	url := fmt.Sprintf("%s/%s?interval=%s&length=%d", fetcher.tiCredentials.baseUrl, strings.ToLower(tickerSymbol), interval, length)
+	url := fmt.Sprintf("%s/%s?interval=%s&length=%d", fetcher.tiCredentials.baseURL, strings.ToLower(tickerSymbol), interval, length)
 
-	resp, err := makeTokenInsightHistoricalDataCall(url, fetcher.tiCredentials.key)
-
+	resp, err := makeTokenInsightHistoricalDataCall(ctx, url, fetcher.tiCredentials.key)
 	if err != nil {
 		return nil, err
 	}
@@ -91,14 +102,13 @@ func handleDay1DataFetching(fetcher *CryptoDataFetcher, tickerSymbol string, len
 	return results, nil
 }
 
-func handleHour4DataFetching(fetcher *CryptoDataFetcher, tickerSymbol string, length int) ([]*TickerData, error) {
+func handleHour4DataFetching(ctx context.Context, fetcher *CryptoDataFetcher, tickerSymbol string, length int) ([]*TickerData, error) {
 	lengthMultiplier := 4
 	adjustedLength := lengthMultiplier * length
 	interval := "hour"
-	url := fmt.Sprintf("%s/%s?interval=%s&length=%d", fetcher.tiCredentials.baseUrl, strings.ToLower(tickerSymbol), interval, adjustedLength)
+	url := fmt.Sprintf("%s/%s?interval=%s&length=%d", fetcher.tiCredentials.baseURL, strings.ToLower(tickerSymbol), interval, adjustedLength)
 
-	resp, err := makeTokenInsightHistoricalDataCall(url, fetcher.tiCredentials.key)
-
+	resp, err := makeTokenInsightHistoricalDataCall(ctx, url, fetcher.tiCredentials.key)
 	if err != nil {
 		return nil, err
 	}
@@ -113,30 +123,34 @@ func handleHour4DataFetching(fetcher *CryptoDataFetcher, tickerSymbol string, le
 	return results, nil
 }
 
-// CoinAPI can't do concurrent calls with our tier, so can't have more than 1 crypto in W1
-func handleWeek1DataFetching(fetcher *CryptoDataFetcher, tickerSymbol string, length int) ([]*TickerData, error) {
+// CoinAPI can't do concurrent calls with our tier, so can't have more than 1 crypto in W1.
+func handleWeek1DataFetching(
+	ctx context.Context,
+	fetcher *CryptoDataFetcher,
+	tickerSymbol string,
+	length int,
+) ([]*TickerData, error) {
 	tickerShorthand, ok := fetcher.tickerToShorthandMap[tickerSymbol]
 
 	if !ok {
 		return nil, errors.New("cant map crypto ticker")
 	}
 
-	periodId := "7DAY"
+	periodID := "7DAY"
 	currTime := time.Now()
 	timeEnd := currTime.Format("2006-01-02T15:04:05")
 	timeStart := currTime.AddDate(0, 0, -length*7).Format("2006-01-02T15:04:05")
 
 	url := fmt.Sprintf(
 		"%s/BITSTAMP_SPOT_%s_USD/history?time_start=%s&time_end=%s&period_id=%s&limit=%d",
-		fetcher.coinApiCredentials.baseUrl,
+		fetcher.coinAPICredentials.baseURL,
 		tickerShorthand,
 		timeStart,
 		timeEnd,
-		periodId,
+		periodID,
 		length)
 
-	resp, err := makeCoinApiHistoricalDataCall(url, fetcher.coinApiCredentials.key)
-
+	resp, err := makeCoinAPIHistoricalDataCall(ctx, url, fetcher.coinAPICredentials.key)
 	if err != nil {
 		return nil, err
 	}
@@ -151,7 +165,6 @@ func handleWeek1DataFetching(fetcher *CryptoDataFetcher, tickerSymbol string, le
 
 		// Parse the string to a time.Time value
 		parsedTime, err := time.Parse(layout, currRes.TimePeriodEnd)
-
 		if err != nil {
 			return nil, err
 		}
@@ -163,9 +176,8 @@ func handleWeek1DataFetching(fetcher *CryptoDataFetcher, tickerSymbol string, le
 	return results, nil
 }
 
-func makeTokenInsightHistoricalDataCall(url, key string) (*TokenInsightDataResp, error) {
-	req, err := http.NewRequest("GET", url, nil)
-
+func makeTokenInsightHistoricalDataCall(ctx context.Context, url, key string) (*TokenInsightDataResp, error) {
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -174,14 +186,12 @@ func makeTokenInsightHistoricalDataCall(url, key string) (*TokenInsightDataResp,
 	req.Header.Add("TI_API_KEY", key)
 
 	res, err := http.DefaultClient.Do(req)
-
 	if err != nil {
 		return nil, err
 	}
 
 	defer res.Body.Close()
 	body, err := io.ReadAll(res.Body)
-
 	if err != nil {
 		return nil, err
 	}
@@ -195,9 +205,8 @@ func makeTokenInsightHistoricalDataCall(url, key string) (*TokenInsightDataResp,
 	return &resp, nil
 }
 
-func makeCoinApiHistoricalDataCall(url, key string) ([]CoinApiDataResp, error) {
-	req, err := http.NewRequest("GET", url, nil)
-
+func makeCoinAPIHistoricalDataCall(ctx context.Context, url, key string) ([]CoinAPIDataResp, error) {
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -206,19 +215,17 @@ func makeCoinApiHistoricalDataCall(url, key string) ([]CoinApiDataResp, error) {
 	req.Header.Add("X-CoinAPI-Key", key)
 
 	res, err := http.DefaultClient.Do(req)
-
 	if err != nil {
 		return nil, err
 	}
 
 	defer res.Body.Close()
 	body, err := io.ReadAll(res.Body)
-
 	if err != nil {
 		return nil, err
 	}
 
-	var resp []CoinApiDataResp
+	var resp []CoinAPIDataResp
 
 	if err := json.Unmarshal(body, &resp); err != nil {
 		return nil, err

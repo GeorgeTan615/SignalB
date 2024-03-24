@@ -9,6 +9,8 @@ import (
 	"github.com/joho/godotenv"
 )
 
+type DBClient interface{}
+
 var MySqlDB *sql.DB
 
 func InitDB() {

@@ -9,7 +9,7 @@ import (
 	"github.com/signalb/internal/database"
 )
 
-type StrategyResp struct {
+type Resp struct {
 	Strategy          Strategy `json:"strategy"`
 	IsFulfilled       bool     `json:"isFulfilled"`
 	EvaluationMessage string   `json:"evaluationMessage"`
@@ -17,23 +17,34 @@ type StrategyResp struct {
 
 type tickerStrategiesResult struct {
 	tickerSymbol     string
-	strategiesResult []*StrategyResp
+	strategiesResult []*Resp
 }
 
-func evaluateTickersStrategiesByTimeframe(timeframe string) (map[string][]*StrategyResp, error) {
+// TODO refactor
+func evaluateTickersStrategiesByTimeframe(timeframe string) (map[string][]*Resp, error) {
+	chRes := make(chan tickerStrategiesResult)
+	chErr := make(chan error)
 	tickersStrategiesMap, err := getTickersAndStrategyByTimeframe(timeframe)
-
 	if err != nil {
 		return nil, err
 	}
 
-	chRes := make(chan tickerStrategiesResult)
-	chErr := make(chan error)
+	// chRes := make(chan tickerStrategiesResult)
+	// chErr := make(chan error)
+
 	for tickerSymbol, strategies := range tickersStrategiesMap {
-		go evaluateTickerWithStrategiesByTimeframe(tickerSymbol, strategies, timeframe, chRes, chErr)
+		go func(tickerSymbol, timeframe string, strategies []Strategy) {
+			data, err := getTickerDataByTimeframe(tickerSymbol, timeframe)
+			if err != nil {
+				chErr <- err
+				return
+			}
+
+			evaluateStrategiesForTicker(tickerSymbol, strategies, data, chRes, chErr)
+		}(tickerSymbol, timeframe, strategies)
 	}
 
-	result := make(map[string][]*StrategyResp)
+	result := make(map[string][]*Resp)
 	duration := 1 * time.Minute
 	timer := time.NewTicker(duration)
 
@@ -60,7 +71,6 @@ func getTickersAndStrategyByTimeframe(timeframe string) (map[string][]Strategy, 
 					where timeframe = ?`
 
 	res, err := database.MySqlDB.Query(query, timeframe)
-
 	if err != nil {
 		return nil, err
 	}
@@ -76,13 +86,11 @@ func getTickersAndStrategyByTimeframe(timeframe string) (map[string][]Strategy, 
 		)
 
 		err := res.Scan(&tickerSymbol, &strategyStr)
-
 		if err != nil {
 			return nil, err
 		}
 
 		strategy, err := strategyManager.GetStrategyByName(strategyStr)
-
 		if err != nil {
 			return nil, err
 		}
@@ -93,24 +101,19 @@ func getTickersAndStrategyByTimeframe(timeframe string) (map[string][]Strategy, 
 	return tickerToStrategiesMap, nil
 }
 
-func evaluateTickerWithStrategiesByTimeframe(
+// TODO refactor
+func evaluateStrategiesForTicker(
 	tickerSymbol string,
 	strategies []Strategy,
-	timeframe string,
+	data []float64,
 	chRes chan<- tickerStrategiesResult,
-	chErr chan<- error) {
-	data, err := getTickerDataByTimeframe(tickerSymbol, timeframe)
-
-	if err != nil {
-		chErr <- err
-		return
-	}
-
-	chStrategyResp := make(chan *StrategyResp)
-	var strategyResps []*StrategyResp
+	chErr chan<- error,
+) {
+	chStrategyResp := make(chan *Resp)
+	var strategyResps []*Resp
 
 	for _, strategy := range strategies {
-		go evaluateDataWithStrategy(data, strategy, chStrategyResp)
+		go evaluateStrategy(data, strategy, chStrategyResp)
 	}
 
 	timer := time.NewTicker(10 * time.Second)
@@ -133,14 +136,12 @@ func evaluateTickerWithStrategiesByTimeframe(
 }
 
 func getTickerDataByTimeframe(tickerSymbol, timeframe string) ([]float64, error) {
-	query := fmt.Sprintf(
-		`select price
-			from price_%s
-			where ticker_symbol = ?
-			order by time`, strings.ToLower(timeframe))
+	query := fmt.Sprintf(`select price
+							from price_%s
+							where ticker_symbol = ?
+							order by time`, strings.ToLower(timeframe))
 
 	rows, err := database.MySqlDB.Query(query, tickerSymbol)
-
 	if err != nil {
 		return nil, err
 	}
@@ -151,7 +152,6 @@ func getTickerDataByTimeframe(tickerSymbol, timeframe string) ([]float64, error)
 		var price float64
 
 		err := rows.Scan(&price)
-
 		if err != nil {
 			return nil, err
 		}
@@ -162,14 +162,14 @@ func getTickerDataByTimeframe(tickerSymbol, timeframe string) ([]float64, error)
 	return prices, nil
 }
 
-func evaluateDataWithStrategy(
+func evaluateStrategy(
 	data []float64,
 	strategy Strategy,
-	chStrategyRes chan<- *StrategyResp) {
-
+	chStrategyRes chan<- *Resp,
+) {
 	result := strategy.Evaluate(data)
 
-	strategyRes := &StrategyResp{
+	strategyRes := &Resp{
 		Strategy:          strategy,
 		IsFulfilled:       result.IsFulfilled,
 		EvaluationMessage: result.EvaluationMessage,
