@@ -57,7 +57,7 @@ func insertBinding(c context.Context, tickerSymbol, timeframe, strategy string) 
 					where symbol = ?`
 
 	var count int
-	err := database.MySqlDB.QueryRowContext(checkCtx, checkQuery, tickerSymbol).Scan(&count)
+	err := database.Client.DB.QueryRowContext(checkCtx, checkQuery, tickerSymbol).Scan(&count)
 	if err != nil {
 		return err
 	}
@@ -68,7 +68,7 @@ func insertBinding(c context.Context, tickerSymbol, timeframe, strategy string) 
 
 	// Register binding
 	registerQuery := `insert into binding (ticker_symbol, timeframe, strategy) values (?,?,?)`
-	_, err = database.MySqlDB.ExecContext(checkCtx, registerQuery, tickerSymbol, timeframe, strategy)
+	_, err = database.Client.DB.ExecContext(checkCtx, registerQuery, tickerSymbol, timeframe, strategy)
 	if err != nil {
 		return err
 	}
@@ -98,7 +98,7 @@ func getBindingsByTicker(c context.Context, tickerSymbol string) ([]database.Bin
 	ctx, cancel := context.WithTimeout(c, 2*time.Second)
 	defer cancel()
 
-	res, err := database.MySqlDB.QueryContext(ctx, query, tickerSymbol)
+	res, err := database.Client.DB.QueryContext(ctx, query, tickerSymbol)
 	if err != nil {
 		return nil, err
 	}
@@ -140,7 +140,7 @@ func getBindingsByTimeframe(c context.Context, timeframe string) ([]database.Bin
 	ctx, cancel := context.WithTimeout(c, 2*time.Second)
 	defer cancel()
 
-	res, err := database.MySqlDB.QueryContext(ctx, query, timeframe)
+	res, err := database.Client.DB.QueryContext(ctx, query, timeframe)
 	if err != nil {
 		return nil, err
 	}

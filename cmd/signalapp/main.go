@@ -19,7 +19,7 @@ func main() {
 	strategy.InitStrategies()
 	marketprice.InitFetchers()
 	database.InitDB()
-	defer database.MySqlDB.Close()
+	defer database.Client.Close()
 
 	if err := router.Run(":8080"); err != nil {
 		log.Println(err)

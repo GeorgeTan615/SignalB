@@ -32,14 +32,17 @@ func evaluateTickersStrategiesByTimeframe(c context.Context, timeframe string) (
 	}
 
 	var (
-		chRes  = make(chan tickerStrategiesResult, len(tickersStrategiesMap))
-		chErr  = make(chan error, len(tickersStrategiesMap))
-		result = make(map[string][]*Resp)
-		wg     sync.WaitGroup
+		chRes      = make(chan tickerStrategiesResult, len(tickersStrategiesMap))
+		chErr      = make(chan error, len(tickersStrategiesMap))
+		result     = make(map[string][]*Resp)
+		wgEvaluate sync.WaitGroup
+		wgCollect  sync.WaitGroup
 	)
 
+	wgCollect.Add(2)
 	// collect result
 	go func() {
+		defer wgCollect.Done()
 		for res := range chRes {
 			result[res.tickerSymbol] = res.strategiesResult
 		}
@@ -47,15 +50,16 @@ func evaluateTickersStrategiesByTimeframe(c context.Context, timeframe string) (
 
 	// collect error
 	go func() {
+		defer wgCollect.Done()
 		for newErr := range chErr {
 			err = newErr
 		}
 	}()
 
 	for tickerSymbol, strategies := range tickersStrategiesMap {
-		wg.Add(1)
+		wgEvaluate.Add(1)
 		go func(c context.Context, tickerSymbol, timeframe string, strategies []Strategy) {
-			defer wg.Done()
+			defer wgEvaluate.Done()
 
 			ctx, cancel := context.WithTimeout(c, 4*time.Second)
 			defer cancel()
@@ -73,9 +77,10 @@ func evaluateTickersStrategiesByTimeframe(c context.Context, timeframe string) (
 		}(c, tickerSymbol, timeframe, strategies)
 	}
 
-	wg.Wait()
+	wgEvaluate.Wait()
 	close(chRes)
 	close(chErr)
+	wgCollect.Wait()
 
 	if err != nil {
 		return nil, err
@@ -89,7 +94,7 @@ func getTickersAndStrategyByTimeframe(c context.Context, timeframe string) (map[
 					from binding
 					where timeframe = ?`
 
-	res, err := database.MySqlDB.QueryContext(c, query, timeframe)
+	res, err := database.Client.DB.QueryContext(c, query, timeframe)
 	if err != nil {
 		return nil, err
 	}
@@ -136,22 +141,26 @@ func evaluateStrategiesForTicker(
 	var (
 		chStrategyResp = make(chan *Resp)
 		strategyResps  []*Resp
-		wg             *sync.WaitGroup
+		wgEvaluate     sync.WaitGroup
+		wgCollect      sync.WaitGroup
 	)
 
+	wgCollect.Add(1)
 	go func() {
+		defer wgCollect.Done()
 		for resp := range chStrategyResp {
 			strategyResps = append(strategyResps, resp)
 		}
 	}()
 
 	for _, strategy := range strategies {
-		wg.Add(1)
-		go evaluateStrategy(c, data, strategy, chStrategyResp, wg)
+		wgEvaluate.Add(1)
+		evaluateStrategy(c, data, strategy, chStrategyResp, &wgEvaluate)
 	}
 
-	wg.Wait()
+	wgEvaluate.Wait()
 	close(chStrategyResp)
+	wgCollect.Wait()
 
 	if len(strategyResps) != len(strategies) {
 		return errors.New("something went wrong")
@@ -176,7 +185,7 @@ func getTickerDataByTimeframe(c context.Context, tickerSymbol, timeframe string)
 							where ticker_symbol = ?
 							order by time`, strings.ToLower(timeframe))
 
-	rows, err := database.MySqlDB.QueryContext(c, query, tickerSymbol)
+	rows, err := database.Client.DB.QueryContext(c, query, tickerSymbol)
 	if err != nil {
 		return nil, err
 	}

@@ -41,7 +41,7 @@ func insertTicker(c context.Context, symbol, class string) error {
 
 	query := `insert into ticker (symbol, class) values (?,?)`
 
-	_, err := database.MySqlDB.ExecContext(ctx, query, symbol, class)
+	_, err := database.Client.DB.ExecContext(ctx, query, symbol, class)
 	if err != nil {
 		return err
 	}
@@ -66,7 +66,7 @@ func getTickers(c context.Context) ([]database.Ticker, error) {
 
 	query := `select symbol, class from ticker`
 
-	res, err := database.MySqlDB.QueryContext(ctx, query)
+	res, err := database.Client.DB.QueryContext(ctx, query)
 	if err != nil {
 		return nil, err
 	}

@@ -7,11 +7,10 @@ import (
 
 	_ "github.com/go-sql-driver/mysql"
 	"github.com/joho/godotenv"
+	_ "github.com/tursodatabase/libsql-client-go/libsql"
 )
 
-type DBClient interface{}
-
-var MySqlDB *sql.DB
+var Client *DBClient
 
 func InitDB() {
 	err := godotenv.Load("../../.env")
@@ -19,7 +18,7 @@ func InitDB() {
 		log.Println("Failed to load .env file", err)
 	}
 
-	db, err := sql.Open("mysql", os.Getenv("DSN"))
+	db, err := sql.Open("libsql", os.Getenv("TURSO_URL")+os.Getenv("TURSO_TOKEN"))
 	if err != nil {
 		log.Fatalf("failed to connect: %v", err)
 	}
@@ -28,7 +27,7 @@ func InitDB() {
 		log.Fatalf("failed to ping: %v", err)
 	}
 
-	MySqlDB = db
+	Client = newDBClient(db)
 
-	log.Println("Successfully connected to PlanetScale!")
+	log.Println("Successfully connected to database!")
 }

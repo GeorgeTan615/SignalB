@@ -67,7 +67,7 @@ func getTickerClass(c context.Context, ticker string) (string, error) {
 
 	var class string
 
-	err := database.MySqlDB.QueryRowContext(ctx, query, ticker).Scan(&class)
+	err := database.Client.DB.QueryRowContext(ctx, query, ticker).Scan(&class)
 	if err != nil {
 		return "", err
 	}
@@ -81,14 +81,18 @@ func refreshData(c context.Context, ticker, timeframe string, data []*TickerData
 	table := "price_" + strings.ToLower(timeframe)
 	delQuery := fmt.Sprintf(`delete 
 						from %s
-						where ticker_symbol = ?
-						order by time 
-						limit ?`, table)
+						where (ticker_symbol,time) in (
+							select ticker_symbol, time
+							from %s
+							where ticker_symbol = ?
+							order by time 
+							limit ?)`,
+		table, table)
 
 	delCtx, cancel := context.WithTimeout(c, 10*time.Second)
 	defer cancel()
 
-	_, err := database.MySqlDB.ExecContext(delCtx, delQuery, ticker, count)
+	_, err := database.Client.DB.ExecContext(delCtx, delQuery, ticker, count)
 	if err != nil {
 		return err
 	}
@@ -105,7 +109,7 @@ func refreshData(c context.Context, ticker, timeframe string, data []*TickerData
 	}
 
 	finalQuery := builder.String()
-	tx, err := database.MySqlDB.Begin()
+	tx, err := database.Client.DB.Begin()
 	if err != nil {
 		return err
 	}
@@ -129,13 +133,17 @@ func refreshPriceByTimeframe(c context.Context, timeframe string) ([]*RefreshPri
 	}
 
 	var (
-		results []*RefreshPriceResp
-		chRes   = make(chan *RefreshPriceResp, len(tickers))
-		chErr   = make(chan error, len(tickers))
+		results   []*RefreshPriceResp
+		chRes     = make(chan *RefreshPriceResp, len(tickers))
+		chErr     = make(chan error, len(tickers))
+		wgRefresh sync.WaitGroup
+		wgCollect sync.WaitGroup
 	)
 
+	wgCollect.Add(2)
 	// collect results
 	go func() {
+		defer wgCollect.Done()
 		for res := range chRes {
 			results = append(results, res)
 		}
@@ -143,16 +151,16 @@ func refreshPriceByTimeframe(c context.Context, timeframe string) ([]*RefreshPri
 
 	// collect errors
 	go func() {
+		defer wgCollect.Done()
 		for newErr := range chErr {
 			err = newErr
 		}
 	}()
 
-	var wg sync.WaitGroup
 	for _, ticker := range tickers {
-		wg.Add(1)
+		wgRefresh.Add(1)
 		go func(ticker *database.Ticker, timeframe string, chRes chan<- *RefreshPriceResp, chErr chan<- error) {
-			defer wg.Done()
+			defer wgRefresh.Done()
 
 			ctx, cancel := context.WithTimeout(c, 5*time.Second)
 			defer cancel()
@@ -169,9 +177,10 @@ func refreshPriceByTimeframe(c context.Context, timeframe string) ([]*RefreshPri
 		}(ticker, timeframe, chRes, chErr)
 	}
 
-	wg.Wait()
+	wgRefresh.Wait()
 	close(chRes)
 	close(chErr)
+	wgCollect.Wait()
 
 	if err != nil {
 		return nil, err
@@ -188,7 +197,7 @@ func getTickersByTimeframe(c context.Context, timeframe string) ([]*database.Tic
 	ctx, cancel := context.WithTimeout(c, 2*time.Second)
 	defer cancel()
 
-	res, err := database.MySqlDB.QueryContext(ctx, query, timeframe)
+	res, err := database.Client.DB.QueryContext(ctx, query, timeframe)
 	if err != nil {
 		return nil, err
 	}
