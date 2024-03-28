@@ -39,14 +39,7 @@ func insertTicker(c context.Context, symbol, class string) error {
 	ctx, cancel := context.WithTimeout(c, 2*time.Second)
 	defer cancel()
 
-	query := `insert into ticker (symbol, class) values (?,?)`
-
-	_, err := database.Client.DB.ExecContext(ctx, query, symbol, class)
-	if err != nil {
-		return err
-	}
-
-	return nil
+	return database.Client.InsertTicker(ctx, symbol, class)
 }
 
 func GetTickers(c *gin.Context) {
@@ -64,26 +57,5 @@ func getTickers(c context.Context) ([]database.Ticker, error) {
 	ctx, cancel := context.WithTimeout(c, 1*time.Second)
 	defer cancel()
 
-	query := `select symbol, class from ticker`
-
-	res, err := database.Client.DB.QueryContext(ctx, query)
-	if err != nil {
-		return nil, err
-	}
-
-	defer res.Close()
-
-	tickers := []database.Ticker{}
-	for res.Next() {
-		var ticker database.Ticker
-
-		err = res.Scan(&ticker.Symbol, &ticker.Class)
-		if err != nil {
-			return nil, err
-		}
-
-		tickers = append(tickers, ticker)
-	}
-
-	return tickers, err
+	return database.Client.GetTickers(ctx)
 }

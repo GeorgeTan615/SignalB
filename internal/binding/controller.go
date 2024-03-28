@@ -48,32 +48,14 @@ func RegisterBindingController(c *gin.Context) {
 }
 
 func insertBinding(c context.Context, tickerSymbol, timeframe, strategy string) error {
-	// Check if ticker is registered
-	checkCtx, cancel := context.WithTimeout(c, 2*time.Second)
+	ctx, cancel := context.WithTimeout(c, 2*time.Second)
 	defer cancel()
 
-	checkQuery := `select count(symbol) 
-					from ticker 
-					where symbol = ?`
-
-	var count int
-	err := database.Client.DB.QueryRowContext(checkCtx, checkQuery, tickerSymbol).Scan(&count)
-	if err != nil {
-		return err
-	}
-
-	if count == 0 {
+	if !database.Client.IsTickerRegistered(ctx, tickerSymbol) {
 		return fmt.Errorf("%s is not registered", tickerSymbol)
 	}
 
-	// Register binding
-	registerQuery := `insert into binding (ticker_symbol, timeframe, strategy) values (?,?,?)`
-	_, err = database.Client.DB.ExecContext(checkCtx, registerQuery, tickerSymbol, timeframe, strategy)
-	if err != nil {
-		return err
-	}
-
-	return err
+	return database.Client.InsertBinding(ctx, tickerSymbol, timeframe, strategy)
 }
 
 func GetBindingsForTickerController(c *gin.Context) {
@@ -91,31 +73,10 @@ func GetBindingsForTickerController(c *gin.Context) {
 }
 
 func getBindingsByTicker(c context.Context, tickerSymbol string) ([]database.Binding, error) {
-	query := `select ticker_symbol, timeframe, strategy
-					from binding
-					where ticker_symbol = ?`
-
 	ctx, cancel := context.WithTimeout(c, 2*time.Second)
 	defer cancel()
 
-	res, err := database.Client.DB.QueryContext(ctx, query, tickerSymbol)
-	if err != nil {
-		return nil, err
-	}
-
-	defer res.Close()
-
-	var results []database.Binding
-	for res.Next() {
-		var binding database.Binding
-
-		if err := res.Scan(&binding.Timeframe, &binding.Strategy, &binding.TickerSymbol); err != nil {
-			return nil, err
-		}
-		results = append(results, binding)
-	}
-
-	return results, nil
+	return database.Client.GetBindingsByTicker(ctx, tickerSymbol)
 }
 
 func GetBindingsForTimeframeController(c *gin.Context) {
@@ -133,29 +94,8 @@ func GetBindingsForTimeframeController(c *gin.Context) {
 }
 
 func getBindingsByTimeframe(c context.Context, timeframe string) ([]database.Binding, error) {
-	query := `select ticker_symbol, timeframe, strategy
-					from binding
-					where timeframe = ?`
-
 	ctx, cancel := context.WithTimeout(c, 2*time.Second)
 	defer cancel()
 
-	res, err := database.Client.DB.QueryContext(ctx, query, timeframe)
-	if err != nil {
-		return nil, err
-	}
-
-	defer res.Close()
-
-	var results []database.Binding
-	for res.Next() {
-		var binding database.Binding
-
-		if err = res.Scan(&binding.Timeframe, &binding.Strategy, &binding.TickerSymbol); err != nil {
-			return nil, err
-		}
-		results = append(results, binding)
-	}
-
-	return results, nil
+	return database.Client.GetBindingsByTimeframe(ctx, timeframe)
 }

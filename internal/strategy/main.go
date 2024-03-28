@@ -81,12 +81,7 @@ func InitStrategies() {
 		NewRSI(70, Strong, Sell),
 		NewRSI(80, VeryStrong, Sell)
 
-	// SMA
 	sma200 := newSMA(200, VeryStrong)
-
-	// FIBONACCI
-
-	// MOMENTUM, PRICE HUGE DIFFERENCE
 
 	strategyManager = NewStrategyManager(
 		rsi20, rsi30, rsi40, rsi70, rsi80,

@@ -1,8 +1,10 @@
 package database
 
+import "time"
+
 type Ticker struct {
-	Symbol string `json:"symbol"`
-	Class  string `json:"class"`
+	Symbol string `json:"symbol" db:"symbol"`
+	Class  string `json:"class" db:"class"`
 }
 
 func NewTicker(symbol, class string) *Ticker {
@@ -13,9 +15,9 @@ func NewTicker(symbol, class string) *Ticker {
 }
 
 type Binding struct {
-	TickerSymbol string `json:"ticker_symbol"`
-	Timeframe    string `json:"timeframe"`
-	Strategy     string `json:"strategy"`
+	TickerSymbol string `json:"ticker_symbol" db:"ticker_symbol"`
+	Timeframe    string `json:"timeframe" db:"timeframe"`
+	Strategy     string `json:"strategy" db:"strategy"`
 }
 
 func NewBinding(tickerSymbol, timeframe, strategy string) *Binding {
@@ -24,4 +26,10 @@ func NewBinding(tickerSymbol, timeframe, strategy string) *Binding {
 		Timeframe:    timeframe,
 		Strategy:     strategy,
 	}
+}
+
+type PriceData struct {
+	TickerSymbol string
+	Time         time.Time
+	Price        float64
 }

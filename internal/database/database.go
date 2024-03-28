@@ -8,7 +8,7 @@ import (
 	"github.com/joho/godotenv"
 )
 
-var Client *DBClient
+var Client Database
 
 func InitDB() {
 	err := godotenv.Load("../../.env")

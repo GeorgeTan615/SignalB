@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"net/http"
 
+	errorsStdLib "errors"
+
 	"github.com/gin-gonic/gin"
 	"github.com/signalb/internal/errors"
 	"github.com/signalb/internal/timeframe"
@@ -23,7 +25,6 @@ func RefreshPriceByTickerTimeframeController(c *gin.Context) {
 
 	res, err := refreshPriceByTickerTimeframe(reqCtx, ticker, tf)
 	if err != nil {
-		// c.JSON(http.StatusInternalServerError, errors.NewErrorRespWithErr("Error refreshing data", err))
 		c.JSON(http.StatusInternalServerError, errors.NewErrorResp(fmt.Errorf("error refreshing data: %w", err)))
 		return
 	}
@@ -69,7 +70,7 @@ func GetMarketpriceDataByTickerTimeframeController(c *gin.Context) {
 
 	if !ok {
 		c.JSON(http.StatusInternalServerError,
-			errors.NewErrorResp(fmt.Errorf("error getting data fetcher")))
+			errorsStdLib.New("error getting data fetcher"))
 		return
 	}
 

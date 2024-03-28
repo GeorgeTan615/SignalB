@@ -3,9 +3,7 @@ package marketprice
 import (
 	"context"
 	"errors"
-	"fmt"
 	"log"
-	"strings"
 	"sync"
 	"time"
 
@@ -59,70 +57,32 @@ func refreshPriceByTickerClassTimeframe(
 }
 
 func getTickerClass(c context.Context, ticker string) (string, error) {
-	query := `select class 
-					from ticker
-					where symbol = ?`
 	ctx, cancel := context.WithTimeout(c, 2*time.Second)
 	defer cancel()
 
-	var class string
-
-	err := database.Client.DB.QueryRowContext(ctx, query, ticker).Scan(&class)
-	if err != nil {
-		return "", err
-	}
-
-	return class, nil
+	return database.Client.GetTickerClassBySymbol(ctx, ticker)
 }
 
-func refreshData(c context.Context, ticker, timeframe string, data []*TickerData) error {
+func refreshData(c context.Context, tickerSymbol, timeframe string, data []*TickerData) error {
 	// Based on how much data we adding, we will remove x amount of data
-	count := len(data)
-	table := "price_" + strings.ToLower(timeframe)
-	delQuery := fmt.Sprintf(`delete 
-						from %s
-						where (ticker_symbol,time) in (
-							select ticker_symbol, time
-							from %s
-							where ticker_symbol = ?
-							order by time 
-							limit ?)`,
-		table, table)
-
-	delCtx, cancel := context.WithTimeout(c, 20*time.Second)
+	ctx, cancel := context.WithTimeout(c, 20*time.Second)
 	defer cancel()
 
-	_, err := database.Client.DB.ExecContext(delCtx, delQuery, ticker, count)
+	err := database.Client.DeletePriceData(ctx, tickerSymbol, timeframe, len(data))
 	if err != nil {
 		return err
 	}
 
-	// Batch our inserts together to make our write more efficient
-	var builder strings.Builder
-	insQuery := `insert into %s (ticker_symbol,time,price) values ('%s','%s',%.2f);`
-	for i := len(data) - 1; i > -1; i-- {
-		currData := data[i]
-
-		timeString := currData.Time.Format("2006-01-02 15:04:05")
-		nxtQuery := fmt.Sprintf(insQuery, table, ticker, timeString, currData.Price)
-		builder.WriteString(nxtQuery)
+	var priceData []database.PriceData
+	for _, d := range data {
+		priceData = append(priceData, database.PriceData{
+			TickerSymbol: tickerSymbol,
+			Time:         d.Time,
+			Price:        d.Price,
+		})
 	}
 
-	finalQuery := builder.String()
-	tx, err := database.Client.DB.Begin()
-	if err != nil {
-		return err
-	}
-
-	_, err = tx.Exec(finalQuery)
-	if err != nil {
-		if err = tx.Rollback(); err != nil {
-			return err
-		}
-		return err
-	}
-
-	return tx.Commit()
+	return database.Client.InsertPriceData(ctx, timeframe, priceData)
 }
 
 func refreshPriceByTimeframe(c context.Context, timeframe string) ([]*RefreshPriceResp, error) {
@@ -190,31 +150,8 @@ func refreshPriceByTimeframe(c context.Context, timeframe string) ([]*RefreshPri
 }
 
 func getTickersByTimeframe(c context.Context, timeframe string) ([]*database.Ticker, error) {
-	query := `select distinct t.symbol, t.class
-					from ticker t join binding b on t.symbol = b.ticker_symbol
-					where b.timeframe = ?`
-
 	ctx, cancel := context.WithTimeout(c, 5*time.Second)
 	defer cancel()
 
-	res, err := database.Client.DB.QueryContext(ctx, query, timeframe)
-	if err != nil {
-		return nil, err
-	}
-
-	defer res.Close()
-
-	var tickers []*database.Ticker
-	for res.Next() {
-		var ticker database.Ticker
-
-		err = res.Scan(&ticker.Symbol, &ticker.Class)
-		if err != nil {
-			return nil, err
-		}
-
-		tickers = append(tickers, &ticker)
-	}
-
-	return tickers, nil
+	return database.Client.GetTickersByTimeframe(ctx, timeframe)
 }

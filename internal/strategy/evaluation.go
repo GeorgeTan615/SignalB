@@ -3,8 +3,6 @@ package strategy
 import (
 	"context"
 	"errors"
-	"fmt"
-	"strings"
 	"sync"
 	"time"
 
@@ -23,10 +21,7 @@ type tickerStrategiesResult struct {
 }
 
 func evaluateTickersStrategiesByTimeframe(c context.Context, timeframe string) (map[string][]*Resp, error) {
-	ctx, cancel := context.WithTimeout(c, 2*time.Second)
-	defer cancel()
-
-	tickersStrategiesMap, err := getTickersAndStrategyByTimeframe(ctx, timeframe)
+	tickersStrategiesMap, err := getTickersAndStrategyByTimeframe(c, timeframe)
 	if err != nil {
 		return nil, err
 	}
@@ -64,7 +59,7 @@ func evaluateTickersStrategiesByTimeframe(c context.Context, timeframe string) (
 			ctx, cancel := context.WithTimeout(c, 4*time.Second)
 			defer cancel()
 
-			data, err := getTickerDataByTimeframe(ctx, tickerSymbol, timeframe)
+			data, err := getPriceByTicker(ctx, tickerSymbol, timeframe)
 			if err != nil {
 				chErr <- err
 				return
@@ -90,36 +85,23 @@ func evaluateTickersStrategiesByTimeframe(c context.Context, timeframe string) (
 }
 
 func getTickersAndStrategyByTimeframe(c context.Context, timeframe string) (map[string][]Strategy, error) {
-	query := `select ticker_symbol, strategy
-					from binding
-					where timeframe = ?`
+	ctx, cancel := context.WithTimeout(c, 2*time.Second)
+	defer cancel()
 
-	res, err := database.Client.DB.QueryContext(c, query, timeframe)
+	bindings, err := database.Client.GetBindingsByTimeframe(ctx, timeframe)
 	if err != nil {
 		return nil, err
 	}
 
-	defer res.Close()
-
 	tickerToStrategiesMap := make(map[string][]Strategy)
 
-	for res.Next() {
-		var (
-			tickerSymbol string
-			strategyStr  string
-		)
-
-		err := res.Scan(&tickerSymbol, &strategyStr)
+	for _, binding := range bindings {
+		strategy, err := strategyManager.GetStrategyByName(binding.Strategy)
 		if err != nil {
 			return nil, err
 		}
 
-		strategy, err := strategyManager.GetStrategyByName(strategyStr)
-		if err != nil {
-			return nil, err
-		}
-
-		tickerToStrategiesMap[tickerSymbol] = append(tickerToStrategiesMap[tickerSymbol], strategy)
+		tickerToStrategiesMap[binding.TickerSymbol] = append(tickerToStrategiesMap[binding.TickerSymbol], strategy)
 	}
 
 	return tickerToStrategiesMap, nil
@@ -179,31 +161,8 @@ func evaluateStrategiesForTicker(
 	}
 }
 
-func getTickerDataByTimeframe(c context.Context, tickerSymbol, timeframe string) ([]float64, error) {
-	query := fmt.Sprintf(`select price
-							from price_%s
-							where ticker_symbol = ?
-							order by time`, strings.ToLower(timeframe))
-
-	rows, err := database.Client.DB.QueryContext(c, query, tickerSymbol)
-	if err != nil {
-		return nil, err
-	}
-
-	var prices []float64
-
-	for rows.Next() {
-		var price float64
-
-		err := rows.Scan(&price)
-		if err != nil {
-			return nil, err
-		}
-
-		prices = append(prices, price)
-	}
-
-	return prices, nil
+func getPriceByTicker(ctx context.Context, tickerSymbol, timeframe string) ([]float64, error) {
+	return database.Client.GetPriceByTicker(ctx, tickerSymbol, timeframe)
 }
 
 func evaluateStrategy(
