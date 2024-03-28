@@ -1,25 +1,17 @@
 package errors
 
-import "fmt"
-
 const (
-	RequestDeserializationError = "Error deserializing request"
-	DatabaseInsertionError      = "Error inserting data into database"
-	DatabaseQueryError          = "Error querying data from database"
+	RequestDeserializationError = "error deserializing request"
+	DatabaseInsertionError      = "error inserting data into database"
+	DatabaseQueryError          = "error querying data from database"
 )
 
 type ErrorResp struct {
 	Message string `json:"message"`
 }
 
-func NewErrorResp(msg string) *ErrorResp {
+func NewErrorResp(err error) *ErrorResp {
 	return &ErrorResp{
-		Message: msg,
-	}
-}
-
-func NewErrorRespWithErr(msg string, err error) *ErrorResp {
-	return &ErrorResp{
-		Message: fmt.Sprintln(msg, err),
+		Message: err.Error(),
 	}
 }

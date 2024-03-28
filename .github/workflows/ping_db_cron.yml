@@ -1,0 +1,17 @@
+name: Ping Database
+
+on:
+  schedule:
+    - cron: '50 * * * *'    # Every hour's minute 50
+    
+env:
+  PING_DB_URL: ${{ secrets.PING_DB_URL }}
+  
+jobs:
+  ping-db:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Ping DB
+        run: |
+          curl $PING_DB_URL

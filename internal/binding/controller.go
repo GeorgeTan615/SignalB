@@ -19,31 +19,31 @@ func RegisterBindingController(c *gin.Context) {
 
 	if err := c.BindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest,
-			errors.NewErrorRespWithErr(errors.RequestDeserializationError, err))
+			errors.NewErrorResp(fmt.Errorf("%s: %w", errors.RequestDeserializationError, err)))
 		return
 	}
 
 	if !utils.SliceContains[string](strategy.AllowedStrategies, req.Strategy) {
 		c.JSON(http.StatusBadRequest,
-			errors.NewErrorResp(fmt.Sprintf("Strategy must be of %v", strategy.AllowedStrategies)))
+			errors.NewErrorResp(fmt.Errorf("valid strategies: %v", strategy.AllowedStrategies)))
 		return
 	}
 
 	if !utils.SliceContains[string](timeframe.AllowedTimeframes[:], req.Timeframe) {
 		c.JSON(http.StatusBadRequest,
-			errors.NewErrorResp(fmt.Sprintf("Timeframe must be of %v", timeframe.AllowedTimeframes)))
+			errors.NewErrorResp(fmt.Errorf("valid timeframes: %v", timeframe.AllowedTimeframes)))
 		return
 	}
 
 	err := insertBinding(c.Request.Context(), req.TickerSymbol, req.Timeframe, req.Strategy)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError,
-			errors.NewErrorRespWithErr("Insert binding failure", err))
+			errors.NewErrorResp(fmt.Errorf("insert binding: %w", err)))
 		return
 	}
 
 	c.JSON(http.StatusOK, gin.H{
-		"message": fmt.Sprintf("Binding of %+v inserted successfully", req),
+		"message": fmt.Sprintf("binding of %+v inserted successfully", req),
 	})
 }
 
@@ -81,7 +81,7 @@ func GetBindingsForTickerController(c *gin.Context) {
 
 	results, err := getBindingsByTicker(c, tickerSymbol)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, errors.NewErrorRespWithErr("Error getting bindings by ticker", err))
+		c.JSON(http.StatusInternalServerError, errors.NewErrorResp(fmt.Errorf("get bindings by ticker: %w", err)))
 		return
 	}
 
@@ -123,7 +123,7 @@ func GetBindingsForTimeframeController(c *gin.Context) {
 
 	results, err := getBindingsByTimeframe(c, timeframe)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, errors.NewErrorRespWithErr("Error getting bindings by timeframe", err))
+		c.JSON(http.StatusInternalServerError, errors.NewErrorResp(fmt.Errorf("get bindings by timeframe: %w", err)))
 		return
 	}
 

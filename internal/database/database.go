@@ -5,9 +5,7 @@ import (
 	"log"
 	"os"
 
-	_ "github.com/go-sql-driver/mysql"
 	"github.com/joho/godotenv"
-	_ "github.com/tursodatabase/libsql-client-go/libsql"
 )
 
 var Client *DBClient

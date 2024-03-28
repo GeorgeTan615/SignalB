@@ -3,6 +3,7 @@ package main
 import (
 	"github.com/gin-gonic/gin"
 	"github.com/signalb/internal/binding"
+	"github.com/signalb/internal/database"
 	"github.com/signalb/internal/marketprice"
 	"github.com/signalb/internal/strategy"
 	"github.com/signalb/internal/ticker"
@@ -40,4 +41,6 @@ func InitRoutes(router *gin.Engine) {
 		strategies.GET("", strategy.GetStrategiesController)
 		strategies.GET("/:timeframe/evaluate", strategy.EvaluateTickerStrategiesByTimeframeController)
 	}
+
+	router.GET("/ping", database.PingController)
 }

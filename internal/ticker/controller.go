@@ -16,17 +16,17 @@ func RegisterTicker(c *gin.Context) {
 	var req RegisterTickerReq
 
 	if err := c.BindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, errors.NewErrorRespWithErr(errors.RequestDeserializationError, err))
+		c.JSON(http.StatusBadRequest, errors.NewErrorResp(fmt.Errorf("%s: %w", errors.RequestDeserializationError, err)))
 		return
 	}
 
 	if !utils.SliceContains[string](AllowedClasses[:], req.Class) {
-		c.JSON(http.StatusBadRequest, errors.NewErrorResp(fmt.Sprintf("Class can only be of %s", AllowedClasses)))
+		c.JSON(http.StatusBadRequest, errors.NewErrorResp(fmt.Errorf("valid classes: %s", AllowedClasses)))
 		return
 	}
 
 	if err := insertTicker(c.Request.Context(), req.Symbol, req.Class); err != nil {
-		c.JSON(http.StatusInternalServerError, errors.NewErrorRespWithErr(errors.DatabaseInsertionError, err))
+		c.JSON(http.StatusInternalServerError, errors.NewErrorResp(fmt.Errorf("%s: %w", errors.DatabaseInsertionError, err)))
 		return
 	}
 
@@ -52,7 +52,7 @@ func insertTicker(c context.Context, symbol, class string) error {
 func GetTickers(c *gin.Context) {
 	results, err := getTickers(c.Request.Context())
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, errors.NewErrorRespWithErr(errors.DatabaseQueryError, err))
+		c.JSON(http.StatusInternalServerError, errors.NewErrorResp(fmt.Errorf("%s: %w", errors.DatabaseQueryError, err)))
 	}
 
 	c.JSON(http.StatusOK, gin.H{

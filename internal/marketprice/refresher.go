@@ -89,7 +89,7 @@ func refreshData(c context.Context, ticker, timeframe string, data []*TickerData
 							limit ?)`,
 		table, table)
 
-	delCtx, cancel := context.WithTimeout(c, 10*time.Second)
+	delCtx, cancel := context.WithTimeout(c, 20*time.Second)
 	defer cancel()
 
 	_, err := database.Client.DB.ExecContext(delCtx, delQuery, ticker, count)
@@ -162,7 +162,7 @@ func refreshPriceByTimeframe(c context.Context, timeframe string) ([]*RefreshPri
 		go func(ticker *database.Ticker, timeframe string, chRes chan<- *RefreshPriceResp, chErr chan<- error) {
 			defer wgRefresh.Done()
 
-			ctx, cancel := context.WithTimeout(c, 5*time.Second)
+			ctx, cancel := context.WithTimeout(c, 10*time.Second)
 			defer cancel()
 
 			result, err := refreshPriceByTickerClassTimeframe(ctx, ticker.Symbol, ticker.Class, timeframe)
@@ -194,7 +194,7 @@ func getTickersByTimeframe(c context.Context, timeframe string) ([]*database.Tic
 					from ticker t join binding b on t.symbol = b.ticker_symbol
 					where b.timeframe = ?`
 
-	ctx, cancel := context.WithTimeout(c, 2*time.Second)
+	ctx, cancel := context.WithTimeout(c, 5*time.Second)
 	defer cancel()
 
 	res, err := database.Client.DB.QueryContext(ctx, query, timeframe)

@@ -8,6 +8,7 @@ import (
 	"github.com/signalb/internal/marketprice"
 	"github.com/signalb/internal/strategy"
 	"github.com/signalb/internal/telegram"
+	_ "github.com/tursodatabase/libsql-client-go/libsql"
 )
 
 func main() {

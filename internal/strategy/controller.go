@@ -23,14 +23,14 @@ func EvaluateTickerStrategiesByTimeframeController(c *gin.Context) {
 
 	if !utils.SliceContains[string](timeframe.AllowedTimeframes[:], tf) {
 		c.JSON(http.StatusBadRequest,
-			errors.NewErrorResp(fmt.Sprintf("Timeframe must be of %v", timeframe.AllowedTimeframes)))
+			errors.NewErrorResp(fmt.Errorf("valid timeframes: %v", timeframe.AllowedTimeframes)))
 		return
 	}
 
 	res, err := evaluateTickersStrategiesByTimeframe(c.Request.Context(), tf)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError,
-			errors.NewErrorRespWithErr("Error evaluating strategies for each ticker in the given timeframe", err))
+			errors.NewErrorResp(fmt.Errorf("error evaluating strategies for each ticker in the given timeframe: %w", err)))
 		return
 	}
 
@@ -38,7 +38,7 @@ func EvaluateTickerStrategiesByTimeframeController(c *gin.Context) {
 	err = telegram.Bot.SendMessageByHTML(telegram.Bot.DefaultChatID, formattedOutput)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError,
-			errors.NewErrorRespWithErr("Error sending updates to Telegram", err))
+			errors.NewErrorResp(fmt.Errorf("send updates to Telegram: %w", err)))
 		return
 	}
 

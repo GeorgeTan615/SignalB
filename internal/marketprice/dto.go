@@ -1,49 +1,51 @@
 package marketprice
 
-type MetadataResp struct {
-	Symbol   string
-	Interval string
-	Timezone string
-}
+type (
+	MetadataResp struct {
+		Symbol   string `json:"Symbol"`
+		Interval string `json:"Interval"`
+		Timezone string `json:"Timezone"`
+	}
 
-type Result struct {
-	Date     string
-	Open     float64
-	Close    float64
-	High     float64
-	Low      float64
-	Volume   float64
-	AdjClose float64
-}
+	Result struct {
+		Date     string  `json:"Date"`
+		Open     float64 `json:"Open"`
+		Close    float64 `json:"Close"`
+		High     float64 `json:"High"`
+		Low      float64 `json:"Low"`
+		Volume   float64 `json:"Volume"`
+		AdjClose float64 `json:"AdjClose"`
+	}
 
-type RapidAPIDataResp struct {
-	Metadata MetadataResp
-	Results  []Result
-}
+	RapidAPIDataResp struct {
+		Metadata MetadataResp `json:"Metadata"`
+		Results  []Result     `json:"Results"`
+	}
 
-type MarketChartResp struct {
-	Price     float64 `json:"price"`
-	Timestamp int64   `json:"timestamp"`
-}
+	MarketChartResp struct {
+		Price     float64 `json:"price"`
+		Timestamp int64   `json:"timestamp"`
+	}
 
-type TIDataResp struct {
-	Name        string            `json:"name"`
-	Symbol      string            `json:"symbol"`
-	MarketChart []MarketChartResp `json:"market_chart"`
-}
+	TIDataResp struct {
+		Name        string            `json:"name"`
+		Symbol      string            `json:"symbol"`
+		MarketChart []MarketChartResp `json:"market_chart"`
+	}
 
-type TokenInsightDataResp struct {
-	Data TIDataResp `json:"data"`
-}
+	TokenInsightDataResp struct {
+		Data TIDataResp `json:"data"`
+	}
 
-type CoinAPIDataResp struct {
-	TimePeriodEnd string  `json:"time_period_end"`
-	PriceClose    float64 `json:"price_close"`
-}
+	CoinAPIDataResp struct {
+		TimePeriodEnd string  `json:"time_period_end"`
+		PriceClose    float64 `json:"price_close"`
+	}
 
-type RefreshPriceResp struct {
-	Ticker          string        `json:"ticker"`
-	Class           string        `json:"class"`
-	Timeframe       string        `json:"timeframe"`
-	RefreshedPrices []*TickerData `json:"refreshedPrices"`
-}
+	RefreshPriceResp struct {
+		Ticker          string        `json:"ticker"`
+		Class           string        `json:"class"`
+		Timeframe       string        `json:"timeframe"`
+		RefreshedPrices []*TickerData `json:"refreshedPrices"`
+	}
+)
