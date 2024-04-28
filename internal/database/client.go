@@ -237,7 +237,7 @@ func (d *DBClient) GetPriceByTicker(ctx context.Context, tickerSymbol, timeframe
 	query := fmt.Sprintf(
 		`select price
 		from price_%s
-		where ticker_symbol = ?s
+		where ticker_symbol = ?
 		order by time`, strings.ToLower(timeframe))
 
 	rows, err := d.DB.QueryContext(ctx, query, tickerSymbol)
