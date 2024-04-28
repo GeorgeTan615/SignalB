@@ -1,10 +1,12 @@
 package strategy
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
+	"time"
 )
 
 const (
@@ -29,7 +31,7 @@ func newFearNGreedIdx() *FearNGreedIdx {
 }
 
 func (s *FearNGreedIdx) GetName() string {
-	return fmt.Sprintf("fng")
+	return "fng"
 }
 
 func (s *FearNGreedIdx) GetWhitelistedTickerSymbols() []string {
@@ -37,7 +39,15 @@ func (s *FearNGreedIdx) GetWhitelistedTickerSymbols() []string {
 }
 
 func (s *FearNGreedIdx) Evaluate(_ []float64) *EvaluationResult {
-	resp, err := s.httpClient.Get(_bitcoinFNGApiURL)
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, _bitcoinFNGApiURL, nil)
+	if err != nil {
+		return NewEvaluationResult(false, fmt.Sprintf("construct fng api req: %v", err))
+	}
+
+	resp, err := s.httpClient.Do(req)
 	if err != nil {
 		return NewEvaluationResult(false, fmt.Sprintf("get fng api: %v", err))
 	}

@@ -77,9 +77,10 @@ func (d *DBClient) GetTickers(ctx context.Context) ([]Ticker, error) {
 }
 
 func (d *DBClient) GetTickerClassBySymbol(ctx context.Context, tickerSymbol string) (string, error) {
-	query := fmt.Sprintf(`select class 
-					from ticker
-					where symbol = '%s'`, tickerSymbol)
+	query := fmt.Sprintf(
+		`select class 
+		from ticker
+		where symbol = '%s'`, tickerSymbol)
 
 	var class string
 
@@ -92,9 +93,10 @@ func (d *DBClient) GetTickerClassBySymbol(ctx context.Context, tickerSymbol stri
 }
 
 func (d *DBClient) IsTickerRegistered(ctx context.Context, tickerSymbol string) bool {
-	checkQuery := `select count(symbol) 
-							from ticker 
-							where symbol = ?`
+	checkQuery :=
+		`select count(symbol) 
+		from ticker 
+		where symbol = ?`
 
 	var count int
 	err := d.DB.QueryRowContext(ctx, checkQuery, tickerSymbol).Scan(&count)
@@ -103,17 +105,19 @@ func (d *DBClient) IsTickerRegistered(ctx context.Context, tickerSymbol string) 
 }
 
 func (d *DBClient) GetBindingsByTicker(ctx context.Context, tickerSymbol string) ([]Binding, error) {
-	query := fmt.Sprintf(`select ticker_symbol, timeframe, strategy 
-								from binding 
-								where ticker_symbol = '%s'`, tickerSymbol)
+	query := fmt.Sprintf(
+		`select ticker_symbol, timeframe, strategy 
+		from binding 
+		where ticker_symbol = '%s'`, tickerSymbol)
 
 	return d.getBindingsWithQuery(ctx, query)
 }
 
 func (d *DBClient) GetBindingsByTimeframe(ctx context.Context, timeframe string) ([]Binding, error) {
-	query := fmt.Sprintf(`select ticker_symbol, timeframe, strategy 
-								from binding 
-								where timeframe = '%s'`, timeframe)
+	query := fmt.Sprintf(
+		`select ticker_symbol, timeframe, strategy
+		from binding 
+		where timeframe = '%s'`, timeframe)
 
 	return d.getBindingsWithQuery(ctx, query)
 }
@@ -152,14 +156,15 @@ func (d *DBClient) InsertBinding(ctx context.Context, tickerSymbol, timeframe, s
 func (d *DBClient) DeletePriceData(ctx context.Context, tickerSymbol, timeframe string, limit int) error {
 	table := "price_" + strings.ToLower(timeframe)
 
-	delQuery := fmt.Sprintf(`delete 
-						from %s
-						where (ticker_symbol,time) in (
-							select ticker_symbol, time
-							from %s
-							where ticker_symbol = ?
-							order by time 
-							limit ?)`,
+	delQuery := fmt.Sprintf(
+		`delete
+		from %s
+		where (ticker_symbol,time) in (
+			select ticker_symbol, time
+			from %s
+			where ticker_symbol = ?
+			order by time 
+			limit ?)`,
 		table, table)
 
 	_, err := d.DB.ExecContext(ctx, delQuery, tickerSymbol, limit)
@@ -197,9 +202,10 @@ func (d *DBClient) InsertPriceData(ctx context.Context, timeframe string, data [
 }
 
 func (d *DBClient) GetTickersByTimeframe(ctx context.Context, timeframe string) ([]*Ticker, error) {
-	query := `select distinct t.symbol, t.class
-					from ticker t join binding b on t.symbol = b.ticker_symbol
-					where b.timeframe = ?`
+	query :=
+		`select distinct t.symbol, t.class
+		from ticker t join binding b on t.symbol = b.ticker_symbol
+		where b.timeframe = ?`
 
 	rows, err := d.DB.QueryContext(ctx, query, timeframe)
 	if err != nil {
@@ -228,10 +234,11 @@ func (d *DBClient) GetTickersByTimeframe(ctx context.Context, timeframe string) 
 }
 
 func (d *DBClient) GetPriceByTicker(ctx context.Context, tickerSymbol, timeframe string) ([]float64, error) {
-	query := fmt.Sprintf(`select price
-							from price_%s
-							where ticker_symbol = ?
-							order by time`, strings.ToLower(timeframe))
+	query := fmt.Sprintf(
+		`select price
+		from price_%s
+		where ticker_symbol = ?s
+		order by time`, strings.ToLower(timeframe))
 
 	rows, err := d.DB.QueryContext(ctx, query, tickerSymbol)
 	if err != nil {
