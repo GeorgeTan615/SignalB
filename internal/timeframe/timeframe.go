@@ -6,4 +6,4 @@ const (
 	Week1 = "W1"
 )
 
-var AllowedTimeframes = [...]string{Hour4, Day1, Week1}
+var AllowedTimeframes = []string{Hour4, Day1, Week1}

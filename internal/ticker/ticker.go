@@ -5,4 +5,4 @@ const (
 	CryptoClass = "crypto"
 )
 
-var AllowedClasses = [...]string{StockClass, CryptoClass}
+var AllowedClasses = []string{StockClass, CryptoClass}

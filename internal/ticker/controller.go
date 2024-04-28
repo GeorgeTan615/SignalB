@@ -4,12 +4,12 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"slices"
 	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/signalb/internal/database"
 	"github.com/signalb/internal/errors"
-	"github.com/signalb/utils"
 )
 
 func RegisterTicker(c *gin.Context) {
@@ -20,7 +20,7 @@ func RegisterTicker(c *gin.Context) {
 		return
 	}
 
-	if !utils.SliceContains[string](AllowedClasses[:], req.Class) {
+	if !slices.Contains(AllowedClasses, req.Class) {
 		c.JSON(http.StatusBadRequest, errors.NewErrorResp(fmt.Errorf("valid classes: %s", AllowedClasses)))
 		return
 	}

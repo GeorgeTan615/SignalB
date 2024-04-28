@@ -3,25 +3,25 @@ package strategy
 import (
 	"fmt"
 	"net/http"
+	"slices"
 	"strings"
 
 	"github.com/gin-gonic/gin"
 	"github.com/signalb/internal/errors"
 	"github.com/signalb/internal/telegram"
 	"github.com/signalb/internal/timeframe"
-	"github.com/signalb/utils"
 )
 
 func GetStrategiesController(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{
-		"strategies": AllowedStrategies,
+		"strategies": StrategyManager.GetStrategies(),
 	})
 }
 
 func EvaluateTickerStrategiesByTimeframeController(c *gin.Context) {
 	tf := c.Param("timeframe")
 
-	if !utils.SliceContains[string](timeframe.AllowedTimeframes[:], tf) {
+	if !slices.Contains(timeframe.AllowedTimeframes, tf) {
 		c.JSON(http.StatusBadRequest,
 			errors.NewErrorResp(fmt.Errorf("valid timeframes: %v", timeframe.AllowedTimeframes)))
 		return

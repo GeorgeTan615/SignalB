@@ -40,12 +40,10 @@ type Strategy interface {
 }
 
 var (
-	AllowedStrategies []string
-	strategyManager   *Manager
+	StrategyManager *Manager
 )
 
 type Manager struct {
-	Strategies        []Strategy
 	NameToStrategyMap map[string]Strategy
 }
 
@@ -54,11 +52,9 @@ func NewStrategyManager(strategies ...Strategy) *Manager {
 
 	for _, strategy := range strategies {
 		nameToStrategyMap[strategy.GetName()] = strategy
-		AllowedStrategies = append(AllowedStrategies, strategy.GetName())
 	}
 
 	return &Manager{
-		Strategies:        strategies,
 		NameToStrategyMap: nameToStrategyMap,
 	}
 }
@@ -73,6 +69,16 @@ func (sm *Manager) GetStrategyByName(strategyName string) (Strategy, error) {
 	return strategy, nil
 }
 
+func (sm *Manager) GetStrategies() []string {
+	res := make([]string, 0, len(sm.NameToStrategyMap))
+
+	for name := range sm.NameToStrategyMap {
+		res = append(res, name)
+	}
+
+	return res
+}
+
 func InitStrategies() {
 	// RSI
 	rsi20, rsi30, rsi40, rsi70, rsi80 := NewRSI(20, VeryStrong, Buy),
@@ -83,7 +89,7 @@ func InitStrategies() {
 
 	sma200 := newSMA(200, VeryStrong)
 
-	strategyManager = NewStrategyManager(
+	StrategyManager = NewStrategyManager(
 		rsi20, rsi30, rsi40, rsi70, rsi80,
 		sma200,
 	)

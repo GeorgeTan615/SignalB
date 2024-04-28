@@ -3,13 +3,13 @@ package marketprice
 import (
 	"fmt"
 	"net/http"
+	"slices"
 
 	errorsStdLib "errors"
 
 	"github.com/gin-gonic/gin"
 	"github.com/signalb/internal/errors"
 	"github.com/signalb/internal/timeframe"
-	"github.com/signalb/utils"
 )
 
 func RefreshPriceByTickerTimeframeController(c *gin.Context) {
@@ -17,7 +17,7 @@ func RefreshPriceByTickerTimeframeController(c *gin.Context) {
 	ticker := c.Param("ticker")
 	reqCtx := c.Request.Context()
 
-	if !utils.SliceContains[string](timeframe.AllowedTimeframes[:], tf) {
+	if !slices.Contains(timeframe.AllowedTimeframes, tf) {
 		c.JSON(http.StatusBadRequest,
 			errors.NewErrorResp(fmt.Errorf("valid timeframes: %v", timeframe.AllowedTimeframes)))
 		return
@@ -35,7 +35,7 @@ func RefreshPriceByTickerTimeframeController(c *gin.Context) {
 func RefreshMarketpriceByTimeframeController(c *gin.Context) {
 	tf := c.Param("timeframe")
 
-	if !utils.SliceContains[string](timeframe.AllowedTimeframes[:], tf) {
+	if !slices.Contains(timeframe.AllowedTimeframes, tf) {
 		c.JSON(http.StatusBadRequest,
 			errors.NewErrorResp(fmt.Errorf("valid timeframes: %v", timeframe.AllowedTimeframes)))
 

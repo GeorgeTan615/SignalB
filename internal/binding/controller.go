@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"slices"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -11,7 +12,6 @@ import (
 	"github.com/signalb/internal/errors"
 	"github.com/signalb/internal/strategy"
 	"github.com/signalb/internal/timeframe"
-	"github.com/signalb/utils"
 )
 
 func RegisterBindingController(c *gin.Context) {
@@ -23,13 +23,13 @@ func RegisterBindingController(c *gin.Context) {
 		return
 	}
 
-	if !utils.SliceContains[string](strategy.AllowedStrategies, req.Strategy) {
+	if _, ok := strategy.StrategyManager.NameToStrategyMap[req.Strategy]; !ok {
 		c.JSON(http.StatusBadRequest,
-			errors.NewErrorResp(fmt.Errorf("valid strategies: %v", strategy.AllowedStrategies)))
+			errors.NewErrorResp(fmt.Errorf("valid strategies: %v", strategy.StrategyManager.GetStrategies())))
 		return
 	}
 
-	if !utils.SliceContains[string](timeframe.AllowedTimeframes[:], req.Timeframe) {
+	if !slices.Contains(timeframe.AllowedTimeframes, req.Timeframe) {
 		c.JSON(http.StatusBadRequest,
 			errors.NewErrorResp(fmt.Errorf("valid timeframes: %v", timeframe.AllowedTimeframes)))
 		return
@@ -47,7 +47,7 @@ func RegisterBindingController(c *gin.Context) {
 	})
 }
 
-func insertBinding(c context.Context, tickerSymbol, timeframe, strategy string) error {
+func insertBinding(c context.Context, tickerSymbol, timeframe, strategyName string) error {
 	ctx, cancel := context.WithTimeout(c, 2*time.Second)
 	defer cancel()
 
@@ -55,7 +55,7 @@ func insertBinding(c context.Context, tickerSymbol, timeframe, strategy string) 
 		return fmt.Errorf("%s is not registered", tickerSymbol)
 	}
 
-	return database.Client.InsertBinding(ctx, tickerSymbol, timeframe, strategy)
+	return database.Client.InsertBinding(ctx, tickerSymbol, timeframe, strategyName)
 }
 
 func GetBindingsForTickerController(c *gin.Context) {

@@ -96,7 +96,7 @@ func getTickersAndStrategyByTimeframe(c context.Context, timeframe string) (map[
 	tickerToStrategiesMap := make(map[string][]Strategy)
 
 	for _, binding := range bindings {
-		strategy, err := strategyManager.GetStrategyByName(binding.Strategy)
+		strategy, err := StrategyManager.GetStrategyByName(binding.Strategy)
 		if err != nil {
 			return nil, err
 		}
