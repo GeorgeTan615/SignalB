@@ -23,7 +23,8 @@ func RegisterBindingController(c *gin.Context) {
 		return
 	}
 
-	if _, ok := strategy.StrategyManager.NameToStrategyMap[req.Strategy]; !ok {
+	strategyInstance, ok := strategy.StrategyManager.NameToStrategyMap[req.Strategy]
+	if !ok {
 		c.JSON(http.StatusBadRequest,
 			errors.NewErrorResp(fmt.Errorf("valid strategies: %v", strategy.StrategyManager.GetStrategies())))
 		return
@@ -33,6 +34,14 @@ func RegisterBindingController(c *gin.Context) {
 		c.JSON(http.StatusBadRequest,
 			errors.NewErrorResp(fmt.Errorf("valid timeframes: %v", timeframe.AllowedTimeframes)))
 		return
+	}
+
+	if whitelistedTickerSymbols := strategyInstance.GetWhitelistedTickerSymbols(); whitelistedTickerSymbols != nil {
+		if !slices.Contains(whitelistedTickerSymbols, req.TickerSymbol) {
+			c.JSON(http.StatusBadRequest,
+				errors.NewErrorResp(fmt.Errorf("valid symbols for strategy %s: %v", req.Strategy, whitelistedTickerSymbols)))
+			return
+		}
 	}
 
 	err := insertBinding(c.Request.Context(), req.TickerSymbol, req.Timeframe, req.Strategy)
@@ -47,7 +56,7 @@ func RegisterBindingController(c *gin.Context) {
 	})
 }
 
-func insertBinding(c context.Context, tickerSymbol, timeframe, strategyName string) error {
+func insertBinding(c context.Context, tickerSymbol, timeframe, strategy string) error {
 	ctx, cancel := context.WithTimeout(c, 2*time.Second)
 	defer cancel()
 
@@ -55,7 +64,7 @@ func insertBinding(c context.Context, tickerSymbol, timeframe, strategyName stri
 		return fmt.Errorf("%s is not registered", tickerSymbol)
 	}
 
-	return database.Client.InsertBinding(ctx, tickerSymbol, timeframe, strategyName)
+	return database.Client.InsertBinding(ctx, tickerSymbol, timeframe, strategy)
 }
 
 func GetBindingsForTickerController(c *gin.Context) {

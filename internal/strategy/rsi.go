@@ -30,6 +30,10 @@ func (s *RSI) GetName() string {
 	return fmt.Sprintf("rsi%0.f", s.Level)
 }
 
+func (s *RSI) GetWhitelistedTickerSymbols() []string {
+	return nil
+}
+
 func (s *RSI) Evaluate(data []float64) *EvaluationResult {
 	if len(data) != marketprice.RefreshAllDataLength {
 		log.Printf("Number of data should be %d", marketprice.RefreshAllDataLength)

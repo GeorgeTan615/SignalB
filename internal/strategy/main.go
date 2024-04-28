@@ -14,6 +14,7 @@ const (
 
 	VeryWeak   Strength = "Very Weak"
 	Weak       Strength = "Weak"
+	Neutral    Strength = "Neutral"
 	Strong     Strength = "Strong"
 	VeryStrong Strength = "Very Strong"
 
@@ -36,6 +37,7 @@ func NewEvaluationResult(isFulfilled bool, message string) *EvaluationResult {
 
 type Strategy interface {
 	GetName() string
+	GetWhitelistedTickerSymbols() []string
 	Evaluate(data []float64) *EvaluationResult
 }
 
@@ -87,10 +89,15 @@ func InitStrategies() {
 		NewRSI(70, Strong, Sell),
 		NewRSI(80, VeryStrong, Sell)
 
+	// SMA
 	sma200 := newSMA(200, VeryStrong)
+
+	// FNG
+	fng := newFearNGreedIdx()
 
 	StrategyManager = NewStrategyManager(
 		rsi20, rsi30, rsi40, rsi70, rsi80,
 		sma200,
+		fng,
 	)
 }

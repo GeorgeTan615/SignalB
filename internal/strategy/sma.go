@@ -22,6 +22,10 @@ func (s *SMA) GetName() string {
 	return fmt.Sprintf("sma%d", s.Length)
 }
 
+func (s *SMA) GetWhitelistedTickerSymbols() []string {
+	return nil
+}
+
 func (s *SMA) Evaluate(data []float64) *EvaluationResult {
 	if len(data) < s.Length {
 		return NewEvaluationResult(false, fmt.Sprintf("lack %d data", s.Length))
